@@ -2384,9 +2384,10 @@ class PlaybackService : MediaLibraryService() {
         // entirely. Letting the transition clear the count is the right answer
         // here — a stream that has never been tried deserves the full budget.
         recoveries.remove(mediaId)
-        player.replaceMediaItem(player.currentMediaItemIndex, restreamed)
+        player.replaceMediaItem(player.currentMediaItemIndex, MetadataCorrector.correct(restreamed))
         player.seekTo(player.currentMediaItemIndex, position)
         player.prepare()
+        publishWidgetState()
         return true
     }
 
@@ -2455,9 +2456,10 @@ class PlaybackService : MediaLibraryService() {
                 // current item then would rewrite whatever the listener skipped
                 // to instead.
                 if (live.currentMediaItem?.mediaId != mediaId) return@withContext
-                live.replaceMediaItem(live.currentMediaItemIndex, declared)
+                live.replaceMediaItem(live.currentMediaItemIndex, MetadataCorrector.correct(declared))
                 live.seekTo(live.currentMediaItemIndex, position)
                 live.prepare()
+                publishWidgetState()
             }
         }
         return true
@@ -3027,16 +3029,19 @@ class PlaybackService : MediaLibraryService() {
                     putBoolean(EXTRA_QUALITY_UPGRADED, true)
                 })
                 .build()
+            val upgradedItem = now.item.buildUpon()
+                .setUri(upgradedUri)
+                .setMediaMetadata(upgradedMetadata)
+                .withResolvedStreamType(stream.url)
+                .build()
+
             player.replaceMediaItem(
                 player.currentMediaItemIndex,
-                now.item.buildUpon()
-                    .setUri(upgradedUri)
-                    .setMediaMetadata(upgradedMetadata)
-                    .withResolvedStreamType(stream.url)
-                    .build(),
+                MetadataCorrector.correct(upgradedItem),
             )
             player.seekTo(player.currentMediaItemIndex, now.position)
             player.prepare()
+            publishWidgetState()
             QualityUpgrade.unshelve(mediaId)
             TrackLog.d("BitChord", "upgraded to ${stream.format.summary} at ${now.position}ms")
             watchUpgrade(mediaId, now.uri, now.position, now.duration, previousFormat)
@@ -3437,10 +3442,11 @@ class PlaybackService : MediaLibraryService() {
             val abandoned = item.localConfiguration?.uri
             player.replaceMediaItem(
                 player.currentMediaItemIndex,
-                item.buildUpon().setUri(previousUri).build(),
+                MetadataCorrector.correct(item.buildUpon().setUri(previousUri).build()),
             )
             player.seekTo(player.currentMediaItemIndex, position)
             player.prepare()
+            publishWidgetState()
             // Whatever the replacement wrote is a prefix of a file nothing will
             // ever finish, under a key the *next* upgrade of this track would
             // key to as well — see [AudioCache.discardRendition]. Off the main
@@ -3929,6 +3935,8 @@ class PlaybackService : MediaLibraryService() {
                 isPlaying = playing ?: exoPlayer.playWhenReady,
                 hasPrevious = exoPlayer.hasPreviousMediaItem(),
                 hasNext = exoPlayer.hasNextMediaItem(),
+                positionMs = exoPlayer.currentPosition,
+                durationMs = exoPlayer.duration,
             ),
         )
         MediaWidget.refresh(this)

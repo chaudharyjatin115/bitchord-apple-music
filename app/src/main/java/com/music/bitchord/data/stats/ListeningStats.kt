@@ -304,6 +304,52 @@ object ListeningStats {
         }
     }
 
+    /**
+     * Top songs from recent listening history sorted by a recency-weighted heavy rotation score.
+     */
+    suspend fun getOnRepeatSongs(limit: Int = 30): List<Song> = withContext(Dispatchers.IO) {
+        flushAndAwait()
+        val today = LocalDate.now()
+        val now = System.currentTimeMillis()
+        val merged = MergedBucket()
+        months().filter { ReplayPeriod.THIS_MONTH.covers(it, today) || ReplayPeriod.THIS_MONTH.covers(it, today.minusMonths(1)) }
+            .forEach { month -> read(month.toString())?.let(merged::add) }
+
+        merged.tracks.values
+            .filter { it.plays > 0 || it.ms >= 30_000L }
+            .map { entry ->
+                val daysAgo = if (entry.last > 0L) ((now - entry.last) / 86400000L).coerceAtLeast(0) else 30L
+                val recencyMultiplier = when {
+                    daysAgo <= 3 -> 2.2f
+                    daysAgo <= 7 -> 1.6f
+                    daysAgo <= 14 -> 1.2f
+                    daysAgo <= 30 -> 0.75f
+                    else -> 0.35f
+                }
+                val baseScore = (entry.plays * 2.5f) + (entry.ms / 120_000.0f) // (ms / 60000) * 0.5 = ms / 120000
+                val repeatBonus = if (entry.plays >= 3) 1.35f else if (entry.plays == 2) 1.18f else 1.0f
+                entry to (baseScore * recencyMultiplier * repeatBonus)
+            }
+            .filter { it.second > 0.4f }
+            .sortedWith(
+                compareByDescending<Pair<TrackEntry, Float>> { it.second }
+                    .thenByDescending { it.first.last }
+                    .thenByDescending { it.first.plays }
+            )
+            .take(limit)
+            .map { (it, _) ->
+                Song(
+                    videoId = it.id,
+                    title = it.title,
+                    artist = it.artist,
+                    thumbnailUrl = it.art,
+                    artistId = it.artistId,
+                    albumId = it.albumId,
+                    albumName = it.album,
+                )
+            }
+    }
+
     /** Every month with a file, oldest first. */
     fun months(): List<YearMonth> {
         if (!ready) return emptyList()

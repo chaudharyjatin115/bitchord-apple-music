@@ -78,6 +78,12 @@ object LyricsRepository {
      * fallback, and the search keeps going through the rest of [order] for a
      * word-synced one, taking the top-priority source that has one.
      */
+    private val lyricsCache = object : android.util.LruCache<String, Result>(32) {}
+
+    fun clearCache() {
+        lyricsCache.evictAll()
+    }
+
     suspend fun lyrics(
         videoId: String,
         title: String,
@@ -89,6 +95,12 @@ object LyricsRepository {
         prioritizeSyllableSync: Boolean = false,
         isrc: String? = null,
     ): Result? = coroutineScope {
+        val cached = lyricsCache.get(videoId)
+        if (cached != null) {
+            com.music.bitchord.data.DebugLog.i("Repository", "Returning cached lyrics for videoId: $videoId")
+            return@coroutineScope cached
+        }
+
         val sequence = order.filter { it in sources } +
             LyricsSource.entries.filter { it in sources && it !in order }
 
@@ -125,11 +137,20 @@ object LyricsRepository {
                 if (lineSynced != null && source == LyricsSource.GENIUS) continue
 
                 val lines = runCatching { job.await() }.getOrNull() ?: continue
-                if (lines.any { it.isWordSynced }) return@coroutineScope result(source, lines)
+                if (lines.any { it.isWordSynced }) {
+                    val res = result(source, lines)
+                    lyricsCache.put(videoId, res)
+                    return@coroutineScope res
+                }
                 if (!prioritizeSyllableSync && lines.any { it.timeMs > 0 }) {
-                    return@coroutineScope result(source, lines)
+                    val res = result(source, lines)
+                    lyricsCache.put(videoId, res)
+                    return@coroutineScope res
                 }
                 if (lineSynced == null) lineSynced = result(source, lines)
+            }
+            if (lineSynced != null) {
+                lyricsCache.put(videoId, lineSynced)
             }
             lineSynced
         } finally {

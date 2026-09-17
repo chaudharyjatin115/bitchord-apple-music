@@ -91,8 +91,12 @@ object TrackMatcher {
         parseTitle(title, artist).let { (it.words + it.versions).joinToString(" ") }
 
     /** The first credited artist — who a catalogue is most likely to file the track under. */
-    internal fun primaryArtist(artist: String): String =
-        artist.lowercase(Locale.ROOT).split(ARTIST_SEPARATORS).firstOrNull()?.trim().orEmpty()
+    internal fun primaryArtist(artist: String): String {
+        val name = artist.lowercase(Locale.ROOT).split(ARTIST_SEPARATORS).firstOrNull()?.trim().orEmpty()
+        return if (name in ARTIST_PLACEHOLDERS) "" else name
+    }
+
+    private val ARTIST_PLACEHOLDERS = setOf("unknown artist", "various artists", "various", "unknown")
 
     /** Whether both credits name at least one of the same artists. */
     internal fun sharesArtist(wanted: String, got: String): Boolean {

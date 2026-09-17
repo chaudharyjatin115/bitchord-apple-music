@@ -484,7 +484,7 @@ fun Song.toMediaItem(): MediaItem {
         // reach.
         else -> "bitchord://watch?v=$videoId${matchQuery()}"
     }
-    return MediaItem.Builder()
+    val item = MediaItem.Builder()
         .setMediaId(videoId)
         .setUri(resolvePlaybackUri(uriString, localPath))
     .setMediaMetadata(
@@ -555,6 +555,9 @@ fun Song.toMediaItem(): MediaItem {
             .build(),
     )
     .build()
+
+    MetadataCorrector.remember(item.mediaId, item.mediaMetadata)
+    return item
 }
 
 /**
