@@ -32,6 +32,7 @@ import com.music.bitchord.data.settings.AppSettings
 import com.music.bitchord.download.Downloads
 import com.music.bitchord.ui.haptics.Haptic
 import com.music.bitchord.ui.haptics.rememberHaptics
+import com.music.bitchord.ui.theme.AccentRed
 import kotlin.math.abs
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -321,13 +322,13 @@ fun SongRow(
      * the sleeve, and the theme's primary against that wash is exactly the
      * kind of thing that reads as pasted on.
      */
-    downloadedTint: Color? = MaterialTheme.colorScheme.primary,
+    downloadedTint: Color? = AccentRed,
     /** Whether this row is the current item in the player's queue. */
     isCurrent: Boolean = false,
     /** Distinguishes active playback from the same current item while paused. */
     isPlaying: Boolean = false,
     /** Accent supplied by artwork-tinted pages. */
-    activeTint: Color = MaterialTheme.colorScheme.primary,
+    activeTint: Color = AccentRed,
     /** True while a Downloads row belongs to the current multi-selection. */
     selected: Boolean = false,
 ) {

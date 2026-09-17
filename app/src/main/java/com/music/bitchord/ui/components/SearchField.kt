@@ -1,5 +1,12 @@
 package com.music.bitchord.ui.components
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -34,6 +41,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import com.music.bitchord.R
+import com.music.bitchord.ui.theme.AccentRed
 
 /**
  * The pill-shaped search field used at the top of the search page — a
@@ -101,7 +109,7 @@ fun SearchField(
                 textStyle = MaterialTheme.typography.bodyLarge.copy(
                     color = MaterialTheme.colorScheme.onBackground,
                 ),
-                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                cursorBrush = SolidColor(AccentRed),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 keyboardActions = KeyboardActions(onSearch = { submit() }),
                 modifier = Modifier
@@ -111,7 +119,11 @@ fun SearchField(
         }
         // Emptying the field is also how the recent searches are got back to,
         // so it needs to be one tap rather than a held backspace.
-        if (query.isNotEmpty()) {
+        AnimatedVisibility(
+            visible = query.isNotEmpty(),
+            enter = fadeIn(spring(stiffness = Spring.StiffnessMediumLow)) + scaleIn(spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = Spring.DampingRatioMediumBouncy)),
+            exit = fadeOut(spring(stiffness = Spring.StiffnessMediumLow)) + scaleOut(spring(stiffness = Spring.StiffnessMediumLow)),
+        ) {
             Box(
                 modifier = Modifier
                     .size(28.dp)

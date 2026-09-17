@@ -18,8 +18,40 @@ object BitChordIcons {
     private const val STROKE = 2.2f
     private val stroke = SolidColor(Color.Black)
 
+    val Home: ImageVector by lazy { home("bc_home", filled = false) }
+
+    val HomeFilled: ImageVector by lazy { home("bc_home_filled", filled = true) }
+
+    private fun home(name: String, filled: Boolean): ImageVector =
+        ImageVector.Builder(
+            name = name,
+            defaultWidth = 24.dp, defaultHeight = 24.dp,
+            viewportWidth = 24f, viewportHeight = 24f,
+        ).apply {
+            path(
+                stroke = stroke,
+                strokeLineWidth = STROKE,
+                strokeLineCap = StrokeCap.Round,
+                strokeLineJoin = StrokeJoin.Round,
+                fill = if (filled) stroke else null,
+            ) {
+                moveTo(12f, 3f)
+                lineTo(3.5f, 10f)
+                lineTo(6f, 10f)
+                lineTo(6f, 19.5f)
+                lineTo(10f, 19.5f)
+                lineTo(10f, 14.5f)
+                arcToRelative(2f, 2f, 0f, isMoreThanHalf = false, isPositiveArc = true, 4f, 0f)
+                lineTo(14f, 19.5f)
+                lineTo(18f, 19.5f)
+                lineTo(18f, 10f)
+                lineTo(20.5f, 10f)
+                close()
+            }
+        }.build()
+
     /** Compact list and quotation-bubble shapes used by the player controls. */
-    val Queue: ImageVector by lazy {
+    val QueueOriginal: ImageVector by lazy {
         ImageVector.Builder(
             name = "bc_queue", defaultWidth = 24.dp, defaultHeight = 24.dp,
             viewportWidth = 24f, viewportHeight = 24f,
@@ -99,9 +131,34 @@ object BitChordIcons {
         }.build()
     }
 
-    val Search: ImageVector by lazy {
+    val Search: ImageVector by lazy { search("bc_search", filled = false) }
+
+    val SearchFilled: ImageVector by lazy { search("bc_search_filled", filled = true) }
+
+    val SkipNext: ImageVector by lazy {
         ImageVector.Builder(
-            name = "bc_search",
+            name = "bc_skip_next",
+            defaultWidth = 24.dp, defaultHeight = 24.dp,
+            viewportWidth = 24f, viewportHeight = 24f,
+        ).apply {
+            path(fill = stroke) {
+                // First triangle: shifted slightly left for tighter pairing
+                moveTo(6.5f, 6.5f)
+                lineTo(13f, 12f)
+                lineTo(6.5f, 17.5f)
+                close()
+                // Second triangle: overlapping slightly with the first's tip
+                moveTo(12.5f, 6.5f)
+                lineTo(19f, 12f)
+                lineTo(12.5f, 17.5f)
+                close()
+            }
+        }.build()
+    }
+
+    private fun search(name: String, filled: Boolean): ImageVector =
+        ImageVector.Builder(
+            name = name,
             defaultWidth = 24.dp, defaultHeight = 24.dp,
             viewportWidth = 24f, viewportHeight = 24f,
         ).apply {
@@ -110,6 +167,7 @@ object BitChordIcons {
                 strokeLineWidth = STROKE,
                 strokeLineCap = StrokeCap.Round,
                 strokeLineJoin = StrokeJoin.Round,
+                fill = if (filled) stroke else null,
             ) {
                 // Lens (full circle from two arcs)
                 moveTo(4.6f, 11f)
@@ -120,11 +178,14 @@ object BitChordIcons {
                 lineTo(20.4f, 20.4f)
             }
         }.build()
-    }
 
-    val Explore: ImageVector by lazy {
+    val Explore: ImageVector by lazy { explore("bc_explore", filled = false) }
+
+    val ExploreFilled: ImageVector by lazy { explore("bc_explore_filled", filled = true) }
+
+    private fun explore(name: String, filled: Boolean): ImageVector =
         ImageVector.Builder(
-            name = "bc_explore",
+            name = name,
             defaultWidth = 24.dp, defaultHeight = 24.dp,
             viewportWidth = 24f, viewportHeight = 24f,
         ).apply {
@@ -133,6 +194,7 @@ object BitChordIcons {
                 strokeLineWidth = STROKE,
                 strokeLineCap = StrokeCap.Round,
                 strokeLineJoin = StrokeJoin.Round,
+                fill = if (filled) stroke else null,
             ) {
                 // Compass dial
                 moveTo(3.4f, 12f)
@@ -146,39 +208,12 @@ object BitChordIcons {
                 close()
             }
         }.build()
-    }
 
-    val Shuffle: ImageVector by lazy {
-        ImageVector.Builder(
-            name = "bc_shuffle",
-            defaultWidth = 24.dp, defaultHeight = 24.dp,
-            viewportWidth = 24f, viewportHeight = 24f,
-        ).apply {
-            path(
-                stroke = stroke,
-                strokeLineWidth = STROKE,
-                strokeLineCap = StrokeCap.Round,
-                strokeLineJoin = StrokeJoin.Round,
-            ) {
-                // Strand that crosses downwards, with its arrow head
-                moveTo(3.4f, 7.4f); lineTo(7f, 7.4f); lineTo(16.6f, 16.6f); lineTo(20.6f, 16.6f)
-                moveTo(18.1f, 14.1f); lineTo(20.6f, 16.6f); lineTo(18.1f, 19.1f)
-                // Strand that crosses upwards, broken around the intersection
-                moveTo(3.4f, 16.6f); lineTo(7f, 16.6f); lineTo(9.8f, 13.9f)
-                moveTo(13.9f, 10.1f); lineTo(16.6f, 7.4f); lineTo(20.6f, 7.4f)
-                moveTo(18.1f, 4.9f); lineTo(20.6f, 7.4f); lineTo(18.1f, 9.9f)
-            }
-        }.build()
-    }
+    val Shuffle: ImageVector by lazy { shuffle("bc_shuffle", filled = false) }
 
-    val Repeat: ImageVector by lazy { repeatLoop("bc_repeat") }
+    val ShuffleFilled: ImageVector by lazy { shuffle("bc_shuffle_filled", filled = true) }
 
-    /**
-     * Two straight runs joined by semicircles, with the arrow heads lying flat
-     * at the ends of the straights. Putting them on the curves instead — as a
-     * first pass did — makes the glyph read as a refresh/sync symbol.
-     */
-    private fun repeatLoop(name: String): ImageVector =
+    private fun shuffle(name: String, filled: Boolean): ImageVector =
         ImageVector.Builder(
             name = name,
             defaultWidth = 24.dp, defaultHeight = 24.dp,
@@ -189,6 +224,39 @@ object BitChordIcons {
                 strokeLineWidth = STROKE,
                 strokeLineCap = StrokeCap.Round,
                 strokeLineJoin = StrokeJoin.Round,
+                fill = if (filled) stroke else null,
+            ) {
+                // Strand that crosses downwards, with its arrow head
+                moveTo(3.4f, 7.4f); lineTo(7f, 7.4f); lineTo(16.6f, 16.6f); lineTo(20.6f, 16.6f)
+                moveTo(18.1f, 14.1f); lineTo(20.6f, 16.6f); lineTo(18.1f, 19.1f)
+                // Strand that crosses upwards, broken around the intersection
+                moveTo(3.4f, 16.6f); lineTo(7f, 16.6f); lineTo(9.8f, 13.9f)
+                moveTo(13.9f, 10.1f); lineTo(16.6f, 7.4f); lineTo(20.6f, 7.4f)
+                moveTo(18.1f, 4.9f); lineTo(20.6f, 7.4f); lineTo(18.1f, 9.9f)
+            }
+        }.build()
+
+    val Repeat: ImageVector by lazy { repeatLoop("bc_repeat", filled = false) }
+
+    val RepeatFilled: ImageVector by lazy { repeatLoop("bc_repeat_filled", filled = true) }
+
+    /**
+     * Two straight runs joined by semicircles, with the arrow heads lying flat
+     * at the ends of the straights. Putting them on the curves instead — as a
+     * first pass did — makes the glyph read as a refresh/sync symbol.
+     */
+    private fun repeatLoop(name: String, filled: Boolean): ImageVector =
+        ImageVector.Builder(
+            name = name,
+            defaultWidth = 24.dp, defaultHeight = 24.dp,
+            viewportWidth = 24f, viewportHeight = 24f,
+        ).apply {
+            path(
+                stroke = stroke,
+                strokeLineWidth = STROKE,
+                strokeLineCap = StrokeCap.Round,
+                strokeLineJoin = StrokeJoin.Round,
+                fill = if (filled) stroke else null,
             ) {
                 moveTo(8.6f, 7.6f)
                 lineTo(15.4f, 7.6f)
@@ -257,10 +325,13 @@ object BitChordIcons {
         }.build()
     }
 
-    /** Speech bubble with two lines of words. */
-    val Lyrics: ImageVector by lazy {
+    val Lyrics: ImageVector by lazy { lyrics("bc_lyrics", filled = false) }
+
+    val LyricsFilled: ImageVector by lazy { lyrics("bc_lyrics_filled", filled = true) }
+
+    private fun lyrics(name: String, filled: Boolean): ImageVector =
         ImageVector.Builder(
-            name = "bc_lyrics",
+            name = name,
             defaultWidth = 24.dp, defaultHeight = 24.dp,
             viewportWidth = 24f, viewportHeight = 24f,
         ).apply {
@@ -269,6 +340,7 @@ object BitChordIcons {
                 strokeLineWidth = STROKE,
                 strokeLineCap = StrokeCap.Round,
                 strokeLineJoin = StrokeJoin.Round,
+                fill = if (filled) stroke else null,
             ) {
                 moveTo(6.2f, 4.6f)
                 lineTo(17.8f, 4.6f)
@@ -283,11 +355,18 @@ object BitChordIcons {
                 lineTo(3.4f, 7.4f)
                 arcToRelative(2.8f, 2.8f, 0f, isMoreThanHalf = false, isPositiveArc = true, 2.8f, -2.8f)
                 close()
-                moveTo(7.6f, 9f); lineTo(16.4f, 9f)
-                moveTo(7.6f, 12.1f); lineTo(13.2f, 12.1f)
+                if (!filled) {
+                    moveTo(7.6f, 9f); lineTo(16.4f, 9f)
+                    moveTo(7.6f, 12.1f); lineTo(13.2f, 12.1f)
+                }
+            }
+            if (filled) {
+                path(fill = SolidColor(Color.White)) {
+                    moveTo(7.6f, 9f); lineTo(16.4f, 9f)
+                    moveTo(7.6f, 12.1f); lineTo(13.2f, 12.1f)
+                }
             }
         }.build()
-    }
 
     /** Plain chevron — a disclosure hint, not a directional arrow. */
     val ChevronRight: ImageVector by lazy {
@@ -516,9 +595,13 @@ object BitChordIcons {
         }.build()
     }
 
-    val Library: ImageVector by lazy {
+    val Library: ImageVector by lazy { library("bc_library", filled = false) }
+
+    val LibraryFilled: ImageVector by lazy { library("bc_library_filled", filled = true) }
+
+    private fun library(name: String, filled: Boolean): ImageVector =
         ImageVector.Builder(
-            name = "bc_library",
+            name = name,
             defaultWidth = 24.dp, defaultHeight = 24.dp,
             viewportWidth = 24f, viewportHeight = 24f,
         ).apply {
@@ -527,15 +610,58 @@ object BitChordIcons {
                 strokeLineWidth = STROKE,
                 strokeLineCap = StrokeCap.Round,
                 strokeLineJoin = StrokeJoin.Round,
+                fill = if (filled) stroke else null,
             ) {
-                // Three upright spines + one leaning — Apple Music's library glyph, thickened
-                moveTo(4.6f, 4.8f); lineTo(4.6f, 19.2f)
-                moveTo(9.2f, 4.8f); lineTo(9.2f, 19.2f)
-                moveTo(13.8f, 4.8f); lineTo(13.8f, 19.2f)
-                moveTo(17.2f, 5.6f); lineTo(20.6f, 18.9f)
+                // Outer box / drawer body
+                moveTo(5f, 8f)
+                lineTo(19f, 8f)
+                arcToRelative(1.5f, 1.5f, 0f, isMoreThanHalf = false, isPositiveArc = true, 1.5f, 1.5f)
+                lineTo(20.5f, 18f)
+                arcToRelative(2f, 2f, 0f, isMoreThanHalf = false, isPositiveArc = true, -2f, 2f)
+                lineTo(5.5f, 20f)
+                arcToRelative(2f, 2f, 0f, isMoreThanHalf = false, isPositiveArc = true, -2f, -2f)
+                lineTo(3.5f, 9.5f)
+                arcToRelative(1.5f, 1.5f, 0f, isMoreThanHalf = false, isPositiveArc = true, 1.5f, -1.5f)
+                close()
+
+                // Top drawer/folder lip
+                moveTo(7f, 5.2f)
+                lineTo(17f, 5.2f)
+            }
+            if (filled) {
+                path(fill = SolidColor(Color.White)) {
+                    // Eighth note head + stem
+                    moveTo(10.2f, 16f)
+                    arcToRelative(1.8f, 1.5f, 0f, isMoreThanHalf = true, isPositiveArc = true, 3f, -1.2f)
+                    lineTo(13.2f, 11f)
+                    lineTo(16f, 11f)
+                    lineTo(16f, 12.5f)
+                    lineTo(14.7f, 12.5f)
+                    lineTo(14.7f, 16f)
+                    arcToRelative(1.8f, 1.5f, 0f, isMoreThanHalf = true, isPositiveArc = true, -3f, 1.2f)
+                    close()
+                }
+            } else {
+                path(fill = stroke) {
+                    // Solid note head inside the library drawer
+                    moveTo(9.2f, 15.5f)
+                    arcToRelative(1.6f, 1.3f, 0f, isMoreThanHalf = true, isPositiveArc = true, 3.2f, 0f)
+                    arcToRelative(1.6f, 1.3f, 0f, isMoreThanHalf = true, isPositiveArc = true, -3.2f, 0f)
+                    close()
+                }
+                path(
+                    stroke = stroke,
+                    strokeLineWidth = 1.8f,
+                    strokeLineCap = StrokeCap.Round,
+                    strokeLineJoin = StrokeJoin.Round,
+                ) {
+                    // Stem and flag inside the drawer
+                    moveTo(12.4f, 15.5f)
+                    lineTo(12.4f, 11f)
+                    lineTo(15.2f, 11f)
+                }
             }
         }.build()
-    }
 
     /** 2x2 grid icon (4 rounded squares) for switching layout to grid view. */
     val GridView: ImageVector by lazy {
@@ -600,6 +726,35 @@ object BitChordIcons {
             }
         }.build()
     }
+
+    val Queue: ImageVector by lazy { queue("bc_queue", filled = false) }
+
+    val QueueFilled: ImageVector by lazy { queue("bc_queue_filled", filled = true) }
+
+    private fun queue(name: String, filled: Boolean): ImageVector =
+        ImageVector.Builder(
+            name = name,
+            defaultWidth = 24.dp, defaultHeight = 24.dp,
+            viewportWidth = 24f, viewportHeight = 24f,
+        ).apply {
+            path(
+                stroke = stroke,
+                strokeLineWidth = STROKE,
+                strokeLineCap = StrokeCap.Round,
+                strokeLineJoin = StrokeJoin.Round,
+                fill = if (filled) stroke else null,
+            ) {
+                // Three lines, with the top two indented for a note head
+                moveTo(11f, 6f); lineTo(20f, 6f)
+                moveTo(11f, 12f); lineTo(20f, 12f)
+                moveTo(4f, 18f); lineTo(20f, 18f)
+                // The note
+                moveTo(7f, 12f); lineTo(7f, 4f); lineTo(10f, 6f)
+                moveTo(4f, 12f); arcToRelative(3f, 2f, 0f, isMoreThanHalf = true, isPositiveArc = false, 6f, 0f)
+                arcToRelative(3f, 2f, 0f, isMoreThanHalf = true, isPositiveArc = false, -6f, 0f)
+                close()
+            }
+        }.build()
 
     /** List view icon (horizontal rows) for switching layout to list view. */
     val ListView: ImageVector by lazy {

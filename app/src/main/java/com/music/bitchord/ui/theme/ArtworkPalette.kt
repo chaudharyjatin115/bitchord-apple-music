@@ -240,19 +240,19 @@ private fun Seed.toPalette(dark: Boolean): ArtworkPalette = if (dark) {
         // Deep enough that white body text clears contrast on any sleeve, but
         // not so deep the hue is gone — the whole point is that the page is
         // recognisably *this* record's colour.
-        background = dominant.withHsl(saturation = { it.coerceIn(0.20f, 0.62f) }, lightness = { 0.13f }),
+        background = dominant.withHsl(saturation = { it.coerceIn(0.10f, 0.40f) }, lightness = { 0.10f }),
         // Follows the edge's own brightness within a band that stays clear of
         // white body text at the top and of [background] at the bottom: a
         // sleeve that ends dark hands over almost invisibly, one that ends
         // bright leaves a page that is visibly lit from under the artwork.
         wash = edge.withHsl(
-            saturation = { it.coerceIn(0.18f, 0.58f) },
-            lightness = { it.coerceIn(0.14f, 0.24f) },
+            saturation = { it.coerceIn(0.10f, 0.35f) },
+            lightness = { it.coerceIn(0.12f, 0.20f) },
         ),
-        elevated = dominant.withHsl(saturation = { it.coerceIn(0.20f, 0.62f) }, lightness = { 0.22f }),
+        elevated = dominant.withHsl(saturation = { it.coerceIn(0.10f, 0.40f) }, lightness = { 0.18f }),
         accent = vibrant.withHsl(
-            saturation = { it.coerceAtLeast(0.55f) },
-            lightness = { it.coerceIn(0.62f, 0.78f) },
+            saturation = { it.coerceIn(0.35f, 0.80f) },
+            lightness = { it.coerceIn(0.60f, 0.75f) },
         ),
         onBackground = Color.White,
         // Well above the grey the untinted screens use for secondary text. A

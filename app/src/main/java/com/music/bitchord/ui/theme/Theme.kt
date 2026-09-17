@@ -7,8 +7,11 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.material3.Typography
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 import androidx.compose.ui.text.TextStyle
@@ -18,9 +21,32 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.music.bitchord.R
 
-// Apple Music's signature red. No longer the primary accent, but kept for the
-// spots (Replay's rank badge) that want that specific red regardless of theme.
-val AccentRed = Color(0xFFFA2D48)
+// Apple Music's signature red.
+val AccentRed = Color(0xFFFA243C)
+
+@Composable
+fun appleMusicSwitchColors(): androidx.compose.material3.SwitchColors {
+    val isDark = isSystemInDarkTheme()
+    val uncheckedTrack = if (isDark) Color(0xFF39393D) else Color(0xFF1C1C1E)
+    val uncheckedBorder = if (isDark) Color(0xFF39393D) else Color(0xFF1C1C1E)
+    val disabledUncheckedTrack = if (isDark) Color(0xFF2C2C2E) else Color(0xFF3A3A3C)
+    return androidx.compose.material3.SwitchDefaults.colors(
+        checkedTrackColor = AccentRed,
+        checkedBorderColor = AccentRed,
+        checkedThumbColor = Color.White,
+        checkedIconColor = AccentRed,
+        uncheckedTrackColor = uncheckedTrack,
+        uncheckedBorderColor = uncheckedBorder,
+        uncheckedThumbColor = Color.White,
+        uncheckedIconColor = Color.Transparent,
+        disabledCheckedTrackColor = AccentRed.copy(alpha = 0.4f),
+        disabledCheckedBorderColor = AccentRed.copy(alpha = 0.4f),
+        disabledCheckedThumbColor = Color.White.copy(alpha = 0.7f),
+        disabledUncheckedTrackColor = disabledUncheckedTrack,
+        disabledUncheckedBorderColor = disabledUncheckedTrack,
+        disabledUncheckedThumbColor = Color.White.copy(alpha = 0.6f),
+    )
+}
 
 private val DarkColors = darkColorScheme(
     primary = Color.White,
