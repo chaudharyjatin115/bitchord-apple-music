@@ -31,9 +31,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.FastRewind
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
-import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -58,6 +58,9 @@ import com.music.bitchord.data.model.Song
 import com.music.bitchord.data.model.artworkAt
 import com.music.bitchord.ui.components.floatingtabbar.FloatingTabBar
 import com.music.bitchord.ui.components.floatingtabbar.FloatingTabBarDefaults
+import com.music.bitchord.ui.icons.BitChordIcons
+import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
+import dev.chrisbanes.haze.materials.HazeMaterials
 import com.music.bitchord.ui.components.floatingtabbar.FloatingTabBarScrollConnection
 import com.music.bitchord.ui.haptics.Haptic
 import com.music.bitchord.ui.haptics.rememberHaptics
@@ -81,6 +84,7 @@ import com.music.bitchord.ui.haptics.rememberHaptics
  * [song] null means nothing is playing, and the accessory is simply absent: the
  * bar is then the tab pill and Search alone, and the collapse still works.
  */
+@OptIn(ExperimentalHazeMaterialsApi::class)
 @Composable
 fun GlassNavBar(
     tabs: List<BottomTab>,
@@ -95,13 +99,14 @@ fun GlassNavBar(
     onPrevious: () -> Unit,
     onExpand: () -> Unit,
     modifier: Modifier = Modifier,
+    hazeStyle: dev.chrisbanes.haze.HazeStyle = dev.chrisbanes.haze.materials.HazeMaterials.thin(MaterialTheme.colorScheme.surface),
 ) {
     // Held for the same reason [tabs] is. The glass factory below closes over
     // this shape, and a fresh RoundedCornerShape each pass means a fresh factory
     // lambda, which the tab bar sees as a changed argument and recomposes on.
     val pillShape = remember { RoundedCornerShape(percent = 50) }
     val contentColor = glassContentColor()
-    val selectedColor = contentColor
+    val selectedColor = com.music.bitchord.ui.theme.AccentRed
     val unselectedColor = contentColor.copy(alpha = 0.65f)
     val haptics = rememberHaptics()
 
@@ -119,7 +124,7 @@ fun GlassNavBar(
 
     // A factory, not a value — see the note in FloatingTabBar's header. Each of
     // the three surfaces gets its own glass modifier and so its own shape cache.
-    val glassSurface: @Composable () -> Modifier = { Modifier.liquidGlass(shape = pillShape) }
+    val glassSurface: @Composable () -> Modifier = { Modifier.liquidGlass(shape = pillShape, style = hazeStyle) }
 
     FloatingTabBar(
         selectedTabKey = selectedIndex,
@@ -143,6 +148,7 @@ fun GlassNavBar(
                     onPrevious = onPrevious,
                     onExpand = onExpand,
                     modifier = accessoryModifier.then(glassSurface()),
+                    accentColor = selectedColor,
                 )
             }
         },
@@ -159,6 +165,7 @@ fun GlassNavBar(
                     onPrevious = onPrevious,
                     onExpand = onExpand,
                     modifier = accessoryModifier.fillMaxWidth().then(glassSurface()),
+                    accentColor = selectedColor,
                 )
             }
         },
@@ -167,7 +174,7 @@ fun GlassNavBar(
         colors = FloatingTabBarDefaults.colors(
             backgroundColor = Color.Transparent,
             accessoryBackgroundColor = Color.Transparent,
-            indicatorColor = glassIndicatorColor().copy(alpha = 0.5f),
+            indicatorColor = glassIndicatorColor().copy(alpha = 0.2f),
         ),
         // Flat, because the glass is not. Every surface here already draws its
         // own [Shadow.Default] as part of the backdrop pass, and the library's
@@ -207,7 +214,7 @@ fun GlassNavBar(
                     key = index,
                     icon = {
                         Icon(
-                            imageVector = tab.icon,
+                            imageVector = if (isSelected) tab.selectedIcon else tab.icon,
                             contentDescription = tab.label,
                             tint = tint,
                             modifier = Modifier.size(25.dp),
@@ -220,7 +227,7 @@ fun GlassNavBar(
                     key = index,
                     icon = {
                         Icon(
-                            imageVector = tab.icon,
+                            imageVector = if (isSelected) tab.selectedIcon else tab.icon,
                             contentDescription = tab.label,
                             tint = tint,
                             modifier = Modifier.size(25.dp),
@@ -271,6 +278,7 @@ private fun GlassNowPlaying(
     onPrevious: () -> Unit,
     onExpand: () -> Unit,
     modifier: Modifier = Modifier,
+    accentColor: Color = com.music.bitchord.ui.theme.AccentRed,
 ) {
     val haptics = rememberHaptics()
     val pressSource = remember { MutableInteractionSource() }
@@ -372,10 +380,28 @@ private fun GlassNowPlaying(
                     )
                 }
             }
+
+            if (!isInline) {
+                IconButton(
+                    onClick = {
+                        haptics.play(Haptic.SkipPrevious)
+                        onPrevious()
+                    },
+                    modifier = Modifier.size(glyphSlot),
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.FastRewind,
+                        contentDescription = stringResource(R.string.widget_previous),
+                        tint = accentColor.copy(alpha = 0.6f),
+                        modifier = Modifier.size(24.dp),
+                    )
+                }
+            }
+
             if (isLoading) {
                 Box(Modifier.size(glyphSlot), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(
-                        color = contentColor,
+                        color = accentColor,
                         strokeWidth = 2.dp,
                         modifier = Modifier.size(if (isInline) 18.dp else 22.dp),
                     )
@@ -391,7 +417,7 @@ private fun GlassNowPlaying(
                     Icon(
                         imageVector = if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
                         contentDescription = stringResource(if (isPlaying) R.string.pause else R.string.play),
-                        tint = contentColor,
+                        tint = accentColor,
                         modifier = Modifier.size(glyphSize),
                     )
                 }
@@ -400,7 +426,6 @@ private fun GlassNowPlaying(
             // tab pill and the Search circle, and the title is what has to
             // survive that, not a second transport button.
             if (!isInline) {
-                Spacer(Modifier.width(8.dp))
                 IconButton(
                     onClick = {
                         haptics.play(Haptic.SkipNext)
@@ -409,9 +434,9 @@ private fun GlassNowPlaying(
                     modifier = Modifier.size(glyphSlot),
                 ) {
                     Icon(
-                        imageVector = Icons.Rounded.SkipNext,
+                        imageVector = BitChordIcons.SkipNext,
                         contentDescription = stringResource(R.string.widget_next),
-                        tint = contentColor,
+                        tint = accentColor,
                         modifier = Modifier.size(glyphSize),
                     )
                 }

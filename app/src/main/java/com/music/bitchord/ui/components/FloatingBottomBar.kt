@@ -51,6 +51,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.music.bitchord.data.settings.AppSettings
 import com.music.bitchord.ui.haptics.Haptic
 import com.music.bitchord.ui.haptics.rememberHaptics
+import com.music.bitchord.ui.theme.AccentRed
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
 import dev.chrisbanes.haze.materials.HazeMaterials
@@ -60,6 +61,7 @@ import kotlin.math.roundToInt
 data class BottomTab(
     val label: String,
     val icon: ImageVector,
+    val selectedIcon: ImageVector = icon,
 )
 
 /**
@@ -138,6 +140,7 @@ fun FloatingBottomBar(
     onTabSelected: (Int) -> Unit,
     hazeState: HazeState,
     modifier: Modifier = Modifier,
+    hazeStyle: dev.chrisbanes.haze.HazeStyle = HazeMaterials.thin(MaterialTheme.colorScheme.surface),
 ) {
     val pillShape = RoundedCornerShape(percent = 50)
     val container = MaterialTheme.colorScheme.surface
@@ -204,11 +207,11 @@ fun FloatingBottomBar(
                 if (reduceDynamicBlur) {
                     Modifier.background(container)
                 } else if (useGlass) {
-                    Modifier.liquidGlass(shape = pillShape)
+                    Modifier.liquidGlass(shape = pillShape, style = hazeStyle)
                 } else {
                     Modifier.optimizedHazeEffect(
                         state = hazeState,
-                        style = HazeMaterials.regular(container),
+                        style = hazeStyle,
                     )
                 },
             )
@@ -216,6 +219,7 @@ fun FloatingBottomBar(
             .padding(horizontal = PILL_INSET, vertical = PILL_INSET),
     ) {
         if (tabWidthPx > 0f) {
+            val indicatorColor = if (useGlass) glassIndicatorColor().copy(alpha = 0.2f) else AccentRed.copy(alpha = 0.15f)
             Box(
                 modifier = Modifier
                     .width(with(density) { tabWidthPx.toDp() })
@@ -231,7 +235,7 @@ fun FloatingBottomBar(
                         scaleY = 1f - lag * STRETCH * SQUASH
                     }
                     .clip(pillShape)
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)),
+                    .background(indicatorColor),
             )
         }
 
@@ -296,8 +300,8 @@ fun FloatingBottomBar(
                     tab = tab,
                     selected = index == selectedIndex,
                     glassSpec = glassSpec,
-                    selectedTint = adaptiveTint,
-                    unselectedTint = adaptiveTint?.copy(alpha = 0.65f),
+                    selectedTint = AccentRed,
+                    unselectedTint = adaptiveTint?.let { it.copy(alpha = 0.55f) },
                     onClick = { onTabSelected(index) },
                     modifier = Modifier.weight(1f),
                 )
@@ -327,7 +331,7 @@ private fun BottomBarItem(
     val haptics = rememberHaptics()
     val tint by animateColorAsState(
         targetValue = if (selected) {
-            selectedTint ?: MaterialTheme.colorScheme.primary
+            selectedTint ?: AccentRed
         } else {
             unselectedTint ?: MaterialTheme.colorScheme.onSurfaceVariant
         },
@@ -348,8 +352,9 @@ private fun BottomBarItem(
             }
             .padding(vertical = TAB_VERTICAL_PADDING),
     ) {
+        val icon = if (selected) tab.selectedIcon else tab.icon
         Icon(
-            imageVector = tab.icon,
+            imageVector = icon,
             contentDescription = tab.label,
             tint = tint,
             modifier = Modifier

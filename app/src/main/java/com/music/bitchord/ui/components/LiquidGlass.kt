@@ -45,12 +45,12 @@ val LocalAppBackdrop = staticCompositionLocalOf<Backdrop> { error("No AppBackdro
 fun isGlassSupported(sdkInt: Int = Build.VERSION.SDK_INT): Boolean = sdkInt >= Build.VERSION_CODES.S
 
 /** Apple-matched defaults (Echo's GlassEffectConfig()), fixed rather than user sliders. */
-private const val VIBRANCY = 1f
-private const val BLUR_RADIUS_DP = 8f
+private const val VIBRANCY = 1.2f
+private const val BLUR_RADIUS_DP = 24f
 private const val LENS_HEIGHT = 0.5f
 private const val LENS_AMOUNT = 0.5f
 private const val LENS_MAX_DP = 48f
-private const val SURFACE_OPACITY = 0.4f
+private const val SURFACE_OPACITY = 0.82f
 
 /**
  * Resolution fraction the glass surface records and processes its backdrop at.
@@ -74,7 +74,7 @@ private const val GLASS_RESOLUTION_SCALE = 0.33f
  * its edge from [Highlight], and this is that edge for everything that does not.
  */
 internal val GLASS_EDGE_WIDTH = 0.5.dp
-internal val GLASS_EDGE_COLOR = Color.White.copy(alpha = 0.10f)
+internal val GLASS_EDGE_COLOR = Color.White.copy(alpha = 0.15f)
 
 /**
  * Icon and label colour for content sitting on a glass surface.
@@ -115,7 +115,10 @@ fun glassIndicatorColor(): Color =
  * throws for any other shape type.
  */
 @Composable
-fun Modifier.liquidGlass(shape: CornerBasedShape): Modifier {
+fun Modifier.liquidGlass(
+    shape: CornerBasedShape,
+    style: dev.chrisbanes.haze.HazeStyle = dev.chrisbanes.haze.HazeStyle.Unspecified,
+): Modifier {
     if (!isGlassSupported()) return this
     val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
     if (reduceDynamicBlur) {
@@ -132,6 +135,8 @@ fun Modifier.liquidGlass(shape: CornerBasedShape): Modifier {
     } else {
         Color(0xFF121212)
     }
+
+    val customTint = style.tints.firstOrNull()?.color?.takeIf { it != Color.Unspecified }
 
     return drawBackdrop(
         backdrop = backdrop,
@@ -151,7 +156,10 @@ fun Modifier.liquidGlass(shape: CornerBasedShape): Modifier {
         highlight = { Highlight.Default },
         shadow = { Shadow.Default },
         onDrawSurface = {
-            drawRect(color = surfaceTintColor.copy(alpha = SURFACE_OPACITY), size = size)
+            drawRect(
+                color = (customTint ?: surfaceTintColor).copy(alpha = if (customTint != null) 0.6f else SURFACE_OPACITY),
+                size = size,
+            )
         },
         backdropScale = GLASS_RESOLUTION_SCALE,
     )

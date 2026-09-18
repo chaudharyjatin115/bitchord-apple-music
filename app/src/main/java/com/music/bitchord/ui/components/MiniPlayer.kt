@@ -1,7 +1,11 @@
 package com.music.bitchord.ui.components
 
 import com.music.bitchord.R
-
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -11,14 +15,15 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.FastRewind
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
-import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -27,11 +32,18 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.remember
+import com.music.bitchord.ui.theme.AccentRed
+import com.music.bitchord.ui.icons.BitChordIcons
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.graphicsLayer
+import dev.chrisbanes.haze.HazeStyle
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -158,38 +170,64 @@ fun MiniPlayer(
     isPlaying: Boolean,
     isLoading: Boolean,
     hazeState: HazeState,
+    positionMs: Long = 0L,
+    durationMs: Long = 0L,
     onPlayPause: () -> Unit,
     onNext: () -> Unit,
     onPrevious: () -> Unit,
     onExpand: () -> Unit,
     modifier: Modifier = Modifier,
+    hazeStyle: dev.chrisbanes.haze.HazeStyle = HazeMaterials.thin(MaterialTheme.colorScheme.surface),
 ) {
     val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
+    val useGlass = LocalLiquidGlassEnabled.current && isGlassSupported()
     val haptics = rememberHaptics()
-    // percent rather than a dp figure, so the corner stays exactly half the
-    // height if the row's contents ever change it — which is what keeps a pill
-    // a pill instead of a rounded rectangle. Same idiom as [FloatingBottomBar]
-    // directly below it, so the two shapes are the same family.
-    val shape = RoundedCornerShape(percent = 50)
+    val interactionSource = androidx.compose.runtime.remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.88f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioLowBouncy,
+            stiffness = Spring.StiffnessLow,
+        ),
+        label = "miniPlayerScale",
+    )
+    val shape = RoundedCornerShape(20.dp)
     Box(
         modifier = modifier
-            .padding(horizontal = PAGE_GUTTER)
+            .padding(horizontal = 8.dp)
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
+            .shadow(
+                elevation = 12.dp,
+                shape = shape,
+                ambientColor = Color.Black.copy(alpha = 0.5f),
+                spotColor = Color.Black.copy(alpha = 0.5f)
+            )
             .clip(shape)
             .then(
                 if (reduceDynamicBlur) {
                     Modifier.background(MaterialTheme.colorScheme.surface)
+                } else if (useGlass) {
+                    Modifier.optimizedHazeEffect(
+                        state = hazeState,
+                        style = hazeStyle,
+                    )
                 } else {
                     Modifier.optimizedHazeEffect(
                         state = hazeState,
-                        style = HazeMaterials.thin(MaterialTheme.colorScheme.surface),
+                        style = HazeMaterials.regular(MaterialTheme.colorScheme.surface),
                     )
                 },
             )
             .border(0.5.dp, Color.White.copy(alpha = 0.10f), shape)
-            // Deliberately silent: the whole bar is the target, so it catches
-            // stray taps meant for the page behind it, and the sheet rising is
-            // its own confirmation. The glyphs on it still buzz.
-            .clickable(onClick = onExpand)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onExpand,
+            )
             .miniPlayerTrackSwipe(
                 onNext = {
                     haptics.play(Haptic.SkipNext)
@@ -201,12 +239,20 @@ fun MiniPlayer(
                 },
             ),
     ) {
+        val artScale by animateFloatAsState(
+            targetValue = if (isPlaying) 1f else 0.90f,
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioMediumBouncy,
+                stiffness = Spring.StiffnessMediumLow,
+            ),
+            label = "miniPlayerArtScale",
+        )
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(
-                    horizontal = ROW_PADDING_HORIZONTAL,
-                    vertical = ROW_PADDING_VERTICAL,
+                    horizontal = 12.dp,
+                    vertical = 8.dp,
                 ),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -215,6 +261,10 @@ fun MiniPlayer(
                 contentDescription = null,
                 modifier = Modifier
                     .size(40.dp)
+                    .graphicsLayer {
+                        scaleX = artScale
+                        scaleY = artScale
+                    }
                     .clip(RoundedCornerShape(ART_CORNER))
                     .thumbnailBorder(RoundedCornerShape(ART_CORNER))
                     .background(MaterialTheme.colorScheme.surfaceVariant),
@@ -234,45 +284,115 @@ fun MiniPlayer(
                     overflow = TextOverflow.Ellipsis,
                 )
             }
+
+            val prevInteractionSource = remember { MutableInteractionSource() }
+            val isPrevPressed by prevInteractionSource.collectIsPressedAsState()
+            val prevScale by animateFloatAsState(
+                targetValue = if (isPrevPressed) 0.82f else 1f,
+                animationSpec = spring(),
+                label = "prevScale",
+            )
+            IconButton(
+                onClick = {
+                    haptics.play(Haptic.SkipPrevious)
+                    onPrevious()
+                },
+                interactionSource = prevInteractionSource,
+                modifier = Modifier
+                    .size(GLYPH_SLOT)
+                    .graphicsLayer {
+                        scaleX = prevScale
+                        scaleY = prevScale
+                    },
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.FastRewind,
+                    contentDescription = stringResource(R.string.widget_previous),
+                    tint = AccentRed.copy(alpha = 0.6f),
+                    modifier = Modifier.size(24.dp),
+                )
+            }
+
             if (isLoading) {
                 Box(Modifier.size(GLYPH_SLOT), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(
-                        color = MaterialTheme.colorScheme.onBackground,
+                        color = AccentRed,
                         strokeWidth = 2.dp,
                         modifier = Modifier.size(SPINNER_SIZE),
                     )
                 }
             } else {
+                val buttonInteractionSource = remember { MutableInteractionSource() }
+                val isButtonPressed by buttonInteractionSource.collectIsPressedAsState()
+                val buttonScale by animateFloatAsState(
+                    targetValue = if (isButtonPressed) 0.82f else 1f,
+                    animationSpec = spring(),
+                    label = "playPauseScale",
+                )
                 IconButton(
                     onClick = {
                         haptics.play(if (isPlaying) Haptic.Pause else Haptic.Resume)
                         onPlayPause()
                     },
-                    modifier = Modifier.size(GLYPH_SLOT),
+                    interactionSource = buttonInteractionSource,
+                    modifier = Modifier
+                        .size(GLYPH_SLOT)
+                        .graphicsLayer {
+                            scaleX = buttonScale
+                            scaleY = buttonScale
+                        },
                 ) {
                     Icon(
                         imageVector = if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
                         contentDescription = stringResource(if (isPlaying) R.string.pause else R.string.play),
-                        tint = MaterialTheme.colorScheme.onBackground,
+                        tint = AccentRed,
                         modifier = Modifier.size(GLYPH_SIZE),
                     )
                 }
             }
             Spacer(Modifier.width(TRANSPORT_GAP))
+            val nextInteractionSource = remember { MutableInteractionSource() }
+            val isNextPressed by nextInteractionSource.collectIsPressedAsState()
+            val nextScale by animateFloatAsState(
+                targetValue = if (isNextPressed) 0.82f else 1f,
+                animationSpec = spring(),
+                label = "nextScale",
+            )
             IconButton(
                 onClick = {
                     haptics.play(Haptic.SkipNext)
                     onNext()
                 },
-                modifier = Modifier.size(GLYPH_SLOT),
+                interactionSource = nextInteractionSource,
+                modifier = Modifier
+                    .size(GLYPH_SLOT)
+                    .graphicsLayer {
+                        scaleX = nextScale
+                        scaleY = nextScale
+                    },
             ) {
                 Icon(
-                    Icons.Rounded.SkipNext,
+                    imageVector = BitChordIcons.SkipNext,
                     contentDescription = stringResource(R.string.widget_next),
-                    tint = MaterialTheme.colorScheme.onBackground,
+                    tint = AccentRed,
                     modifier = Modifier.size(GLYPH_SIZE),
                 )
             }
+        }
+
+        if (durationMs > 0) {
+            val progress = (positionMs.toFloat() / durationMs).coerceIn(0f, 1f)
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .fillMaxWidth(progress)
+                    .height(2.5.dp)
+                    .background(
+                        Brush.horizontalGradient(
+                            listOf(AccentRed.copy(alpha = 0.5f), AccentRed)
+                        )
+                    )
+            )
         }
     }
 }
