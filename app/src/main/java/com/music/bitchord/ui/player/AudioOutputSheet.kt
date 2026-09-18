@@ -282,11 +282,12 @@ private fun OutputRow(
 ) {
     val haptics = rememberHaptics()
     val active = device.isActive
+    val activeColor = com.music.bitchord.ui.theme.AccentRed
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(ROW_SHAPE)
-            .background(Color.White.copy(alpha = if (active) 0.10f else 0.05f))
+            .background(if (active) activeColor.copy(alpha = 0.18f) else Color.White.copy(alpha = 0.05f))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
@@ -302,13 +303,13 @@ private fun OutputRow(
             modifier = Modifier
                 .size(40.dp)
                 .clip(CircleShape)
-                .background(Color.White.copy(alpha = if (active) 0.16f else 0.08f)),
+                .background(if (active) activeColor.copy(alpha = 0.25f) else Color.White.copy(alpha = 0.08f)),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
                 imageVector = iconFor(device.kind),
                 contentDescription = null,
-                tint = Color.White.copy(alpha = if (active) 1f else 0.7f),
+                tint = if (active) activeColor else Color.White.copy(alpha = 0.7f),
                 modifier = Modifier.size(21.dp),
             )
         }
@@ -319,7 +320,7 @@ private fun OutputRow(
                 style = MaterialTheme.typography.bodyLarge.copy(
                     fontWeight = if (active) FontWeight.SemiBold else FontWeight.Normal,
                 ),
-                color = Color.White.copy(alpha = if (active) 1f else 0.85f),
+                color = if (active) activeColor else Color.White.copy(alpha = 0.85f),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -328,7 +329,7 @@ private fun OutputRow(
                 Text(
                     text = stringResource(R.string.audio_output_playing),
                     style = MaterialTheme.typography.labelMedium,
-                    color = Color.White.copy(alpha = 0.55f),
+                    color = activeColor.copy(alpha = 0.85f),
                 )
             }
         }
@@ -336,7 +337,7 @@ private fun OutputRow(
             Icon(
                 imageVector = Icons.Rounded.Check,
                 contentDescription = null,
-                tint = Color.White,
+                tint = activeColor,
                 modifier = Modifier.size(20.dp),
             )
         }

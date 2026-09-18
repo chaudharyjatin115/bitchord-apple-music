@@ -104,12 +104,13 @@ fun MeshGradientBackground(
      * many cards are on screen.
      */
     animated: Boolean = true,
+    isNight: Boolean = true,
 ) {
     val reduceAnimation by AppSettings.reduceAnimation.collectAsStateWithLifecycle()
 
     val tuned = (palette.colors.ifEmpty { FallbackColors } + FallbackColors)
         .take(4)
-        .map { it.tuned() }
+        .map { it.tuned(isNight) }
 
     // Each colour slot crossfades independently when the track (palette) changes,
     // unless "reduce animation" is on, in which case colours snap straight to target.
@@ -117,7 +118,7 @@ fun MeshGradientBackground(
     val animatedColors = tuned.mapIndexed { index, color ->
         animateColorAsState(color, colorSpec, label = "meshColor$index").value
     }
-    val baseColor by animateColorAsState(tuned.first().dimmed(), colorSpec, label = "meshBase")
+    val baseColor by animateColorAsState(tuned.first().dimmed(isNight), colorSpec, label = "meshBase")
 
     // Read in the draw lambda, not here: an Animatable read during draw
     // invalidates only the drawing, leaving composition out of the loop.
@@ -185,7 +186,7 @@ fun MeshGradientBackground(
             val radius = size.maxDimension * 0.62f
             drawCircle(
                 brush = Brush.radialGradient(
-                    colors = listOf(color.copy(alpha = 0.85f), color.copy(alpha = 0f)),
+                    colors = listOf(color.copy(alpha = if (isNight) 0.85f else 0.45f), color.copy(alpha = 0f)),
                     center = center,
                     radius = radius,
                 ),
@@ -194,15 +195,27 @@ fun MeshGradientBackground(
             )
         }
 
-        // Gentle scrim so white text stays legible over bright art.
-        drawRect(
-            brush = Brush.verticalGradient(
-                colors = listOf(
-                    Color.Black.copy(alpha = 0.10f),
-                    Color.Black.copy(alpha = 0.38f),
+        // Gentle scrim so text stays legible over bright art.
+        if (isNight) {
+            drawRect(
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        Color.Black.copy(alpha = 0.10f),
+                        Color.Black.copy(alpha = 0.38f),
+                    ),
                 ),
-            ),
-        )
+            )
+        } else {
+            // Light Mode Scrim: brighter and warm.
+            drawRect(
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        Color.White.copy(alpha = 0.15f),
+                        Color.White.copy(alpha = 0.45f),
+                    ),
+                ),
+            )
+        }
     }
 }
 
@@ -313,17 +326,23 @@ private fun Color.hsl(): FloatArray =
     FloatArray(3).also { ColorUtils.colorToHSL(toArgb(), it) }
 
 /** Boost saturation and clamp lightness so any artwork yields a rich, non-muddy mesh. */
-private fun Color.tuned(): Color {
+private fun Color.tuned(isNight: Boolean): Color {
     val hsl = FloatArray(3)
     ColorUtils.colorToHSL(toArgb(), hsl)
-    hsl[1] = (hsl[1] * 1.35f).coerceAtMost(1f)
-    hsl[2] = hsl[2].coerceIn(0.28f, 0.58f)
+    if (isNight) {
+        hsl[1] = (hsl[1] * 1.35f).coerceAtMost(1f)
+        hsl[2] = hsl[2].coerceIn(0.28f, 0.58f)
+    } else {
+        // Light Mode: higher lightness, slightly lower saturation for an airy feel.
+        hsl[1] = (hsl[1] * 0.8f).coerceIn(0f, 1f)
+        hsl[2] = (hsl[2] * 0.35f + 0.62f).coerceIn(0f, 0.95f)
+    }
     return Color(ColorUtils.HSLToColor(hsl))
 }
 
-private fun Color.dimmed(): Color {
+private fun Color.dimmed(isNight: Boolean): Color {
     val hsl = FloatArray(3)
     ColorUtils.colorToHSL(toArgb(), hsl)
-    hsl[2] = 0.12f
+    hsl[2] = if (isNight) 0.12f else 0.88f
     return Color(ColorUtils.HSLToColor(hsl))
 }

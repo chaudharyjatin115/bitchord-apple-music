@@ -98,13 +98,14 @@ fun rememberArtworkMesh(
      * second copy of the same cover comes over the wire.
      */
     artPx: Int = CARD_ART_PX,
+    isNight: Boolean = true,
 ): ArtworkMesh? {
     val context = LocalContext.current
     // Seeded from the cache so a cover that has been seen before is on colour
     // in its first frame, with nothing to fade in from.
-    var mesh by remember(imageUrl) { mutableStateOf(imageUrl?.let(meshCache::get)) }
+    var mesh by remember(imageUrl, isNight) { mutableStateOf(imageUrl?.let { meshCache["$isNight|$it"] }) }
 
-    LaunchedEffect(imageUrl, artPx) {
+    LaunchedEffect(imageUrl, artPx, isNight) {
         if (imageUrl == null || mesh != null) return@LaunchedEffect
         val request = ImageRequest.Builder(context)
             .data(imageUrl.artworkAt(artPx))
@@ -122,9 +123,9 @@ fun rememberArtworkMesh(
             val result = SingletonImageLoader.get(context).execute(request)
             val bitmap = (result as? SuccessResult)?.image?.toBitmap()
             if (bitmap != null) {
-                val found = withContext(Dispatchers.Default) { meshOf(bitmap, imageUrl.hashCode()) }
+                val found = withContext(Dispatchers.Default) { meshOf(bitmap, imageUrl.hashCode(), isNight) }
                 if (found != null) {
-                    meshCache[imageUrl] = found
+                    meshCache["$isNight|$imageUrl"] = found
                     mesh = found
                 }
                 // A cover that decoded but had no mesh in it — see [meshOf] —
@@ -134,7 +135,7 @@ fun rememberArtworkMesh(
         }
     }
 
-    LaunchedEffect(canvasFrame) {
+    LaunchedEffect(canvasFrame, isNight) {
         val frame = canvasFrame ?: return@LaunchedEffect
         // Same seed as the still read above, keyed off the URL rather than the
         // frame — a clip's frames are a moving target and aren't cached (the
@@ -142,7 +143,7 @@ fun rememberArtworkMesh(
         // [shuffledBelowSeam] scrambles them into should hold still across a
         // refresh, or the layout would visibly reshuffle under its own colours
         // once a second.
-        mesh = withContext(Dispatchers.Default) { meshOf(frame, imageUrl?.hashCode() ?: 0) } ?: mesh
+        mesh = withContext(Dispatchers.Default) { meshOf(frame, imageUrl?.hashCode() ?: 0, isNight) } ?: mesh
     }
     return mesh
 }
@@ -203,6 +204,7 @@ fun ArtworkMeshBackdrop(
      * several times a second.
      */
     blurRadius: Dp = 32.dp,
+    isNight: Boolean = true,
 ) {
     val reduceAnimation by AppSettings.reduceAnimation.collectAsStateWithLifecycle()
     val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
@@ -263,18 +265,29 @@ fun ArtworkMeshBackdrop(
         // draw lambda invalidates the drawing and leaves composition out of it.
         incoming?.let { drawMesh(it, seamY, alpha = fade.value) }
 
-        // Enough of a scrim to keep white text off a bright sleeve, and no
-        // more. The old backdrop needed a heavier one because it lightened
-        // every colour it drew to a fixed band; these are the sleeve's own,
-        // and a sleeve that ends dark should leave a dark screen.
-        drawRect(
-            brush = Brush.verticalGradient(
-                colors = listOf(
-                    Color.Black.copy(alpha = 0.06f),
-                    Color.Black.copy(alpha = 0.30f),
+        // Enough of a scrim to keep text off the sleeve, adapted for theme.
+        // Dark Mode: deep atmospheric gradient to subordinate atmosphere to artwork.
+        // Light Mode: brighter, warm atmospheric treatment.
+        if (isNight) {
+            drawRect(
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        Color.Black.copy(alpha = 0.12f),
+                        Color.Black.copy(alpha = 0.45f),
+                    ),
                 ),
-            ),
-        )
+            )
+        } else {
+            // Light Mode Scrim: a subtle light lift so the artwork's vibrant colors shine through.
+            drawRect(
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        Color.White.copy(alpha = 0.05f),
+                        Color.White.copy(alpha = 0.18f),
+                    ),
+                ),
+            )
+        }
     }
 }
 
@@ -413,7 +426,7 @@ private const val MESH_SAMPLE = 128
  * what a blur of the artwork would leave there, and a blur has no opinion about
  * which colour in the frame was the interesting one.
  */
-private fun meshOf(source: Bitmap, seed: Int): ArtworkMesh? {
+private fun meshOf(source: Bitmap, seed: Int, isNight: Boolean): ArtworkMesh? {
     val width = source.width
     val height = source.height
     if (width < 1 || height < 1) return null
@@ -454,7 +467,7 @@ private fun meshOf(source: Bitmap, seed: Int): ArtworkMesh? {
 
     val grid = IntArray(cells) { cell ->
         val n = count[cell].coerceAtLeast(1)
-        argb((red[cell] / n).toInt(), (green[cell] / n).toInt(), (blue[cell] / n).toInt()).lifted()
+        argb((red[cell] / n).toInt(), (green[cell] / n).toInt(), (blue[cell] / n).toInt()).lifted(isNight)
     }
     val texels = grid.rotatedBelowSeam(cols, rows, seed).resampled(cols, rows, MESH_TEX)
     val bitmap = Bitmap.createBitmap(texels, MESH_TEX, MESH_TEX, Bitmap.Config.ARGB_8888)
@@ -560,10 +573,16 @@ private fun argb(red: Int, green: Int, blue: Int): Int =
  * find an edge. Neither touches the *proportions*, which is the whole point of
  * this backdrop: a sleeve that is mostly black stays mostly black.
  */
-private fun Int.lifted(): Int {
+private fun Int.lifted(isNight: Boolean): Int {
     val hsl = FloatArray(3).also { ColorUtils.colorToHSL(this, it) }
-    hsl[1] = (hsl[1] * MESH_VIBRANCE).coerceAtMost(1f)
-    hsl[2] = hsl[2].coerceAtLeast(MESH_FLOOR)
+    if (isNight) {
+        hsl[1] = (hsl[1] * MESH_VIBRANCE).coerceAtMost(1f)
+        hsl[2] = hsl[2].coerceAtLeast(MESH_FLOOR)
+    } else {
+        // Light Mode: boost saturation while deriving lightness directly from artwork HSL
+        hsl[1] = (hsl[1] * 1.35f).coerceIn(0f, 1f)
+        hsl[2] = (hsl[2] * 0.45f + 0.45f).coerceIn(0.52f, 0.88f)
+    }
     return ColorUtils.HSLToColor(hsl)
 }
 

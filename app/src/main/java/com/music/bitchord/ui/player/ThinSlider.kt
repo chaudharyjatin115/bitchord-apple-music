@@ -30,10 +30,12 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChanged
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.music.bitchord.ui.theme.AccentRed
 
 /**
  * Apple Music's scrubber: a hairline capsule with no thumb knob, which
@@ -59,13 +61,18 @@ fun ThinSlider(
      * unplayed bar so the mix is visible before it arrives.
      */
     transitionWindow: ClosedFloatingPointRange<Float>? = null,
-    idleHeight: Dp = 7.dp,
-    activeHeight: Dp = 12.dp,
-    activeColor: Color = Color.White.copy(alpha = 0.92f),
-    inactiveColor: Color = Color.White.copy(alpha = 0.26f),
+    idleHeight: Dp = 4.dp,
+    activeHeight: Dp = 10.dp,
+    activeColor: Color = Color.Unspecified,
+    inactiveColor: Color = Color.Unspecified,
     /** Halfway between the two track colours: visible against unplayed, invisible under played. */
-    markerColor: Color = Color.White.copy(alpha = 0.5f),
+    markerColor: Color = Color.Unspecified,
 ) {
+    val contentColor = activeColor.takeOrElse { Color.White }
+    val realActiveColor = activeColor.takeOrElse { contentColor.copy(alpha = 0.92f) }
+    val realInactiveColor = inactiveColor.takeOrElse { contentColor.copy(alpha = 0.20f) }
+    val realMarkerColor = markerColor.takeOrElse { contentColor.copy(alpha = 0.5f) }
+
     var dragging by remember { mutableStateOf(false) }
     val height by animateDpAsState(
         targetValue = if (dragging) activeHeight else idleHeight,
@@ -115,7 +122,7 @@ fun ThinSlider(
                 .height(height),
         ) {
             val radius = CornerRadius(size.height / 2f)
-            drawRoundRect(color = inactiveColor, cornerRadius = radius)
+            drawRoundRect(color = realInactiveColor, cornerRadius = radius)
             // Between the two track colours, and drawn *under* the played fill:
             // once the playhead reaches the window the transition is no longer
             // upcoming, and the ordinary progress colour taking it over is what
@@ -125,7 +132,7 @@ fun ThinSlider(
                 val to = size.width * window.endInclusive.coerceIn(0f, 1f)
                 if (to > from) {
                     drawRoundRect(
-                        color = markerColor,
+                        color = realMarkerColor,
                         topLeft = Offset(from, 0f),
                         size = Size(to - from, size.height),
                         cornerRadius = radius,
@@ -135,7 +142,7 @@ fun ThinSlider(
             val filled = size.width * value.coerceIn(0f, 1f)
             if (filled > 0f && !mixing) {
                 drawRoundRect(
-                    color = activeColor,
+                    color = realActiveColor,
                     size = Size(filled.coerceAtLeast(size.height), size.height),
                     cornerRadius = radius,
                 )
@@ -152,7 +159,7 @@ fun ThinSlider(
             enter = fadeIn(tween(durationMillis = 420)),
             exit = fadeOut(tween(durationMillis = 520)),
         ) {
-            MixSheen(height = height)
+            MixSheen(height = height, contentColor = contentColor)
         }
     }
 }
@@ -175,7 +182,7 @@ fun ThinSlider(
  * unplayed track sits at 0.26, and that is where a white band actually reads.
  */
 @Composable
-private fun MixSheen(height: Dp) {
+private fun MixSheen(height: Dp, contentColor: Color) {
     val transition = rememberInfiniteTransition(label = "mixSheen")
     val phase by transition.animateFloat(
         initialValue = 0f,
@@ -201,7 +208,7 @@ private fun MixSheen(height: Dp) {
             brush = Brush.linearGradient(
                 colorStops = arrayOf(
                     0f to Color.Transparent,
-                    0.5f to Color.White.copy(alpha = 0.95f),
+                    0.5f to contentColor.copy(alpha = 0.95f),
                     1f to Color.Transparent,
                 ),
                 start = Offset(centre - band / 2f, 0f),

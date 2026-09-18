@@ -159,6 +159,11 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
+import androidx.palette.graphics.Palette
+import androidx.compose.foundation.isSystemInDarkTheme
+import com.music.bitchord.ui.theme.AccentRed
+import com.music.bitchord.ui.theme.rememberArtworkPalette
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.drawscope.ContentDrawScope
@@ -857,7 +862,7 @@ private const val LYRICS_UNAVAILABLE_HOLD_MS = 5_000L
 private const val LYRICS_UNAVAILABLE_FADE_MS = 900
 private const val LIGHT_ARTWORK_LUMINANCE_THRESHOLD = 0.45f
 
-private val artworkLuminanceCache = LruCache<String, Float>(20)
+private val luminanceCache = LruCache<String, Float>(20)
 
 @Composable
 private fun rememberArtworkLuminance(imageUrl: String?): Float? {
@@ -868,7 +873,7 @@ private fun rememberArtworkLuminance(imageUrl: String?): Float? {
         luminance = null
         if (imageUrl == null) return@LaunchedEffect
 
-        artworkLuminanceCache.get(imageUrl)?.let { cached ->
+        luminanceCache.get(imageUrl)?.let { cached ->
             luminance = cached
             return@LaunchedEffect
         }
@@ -884,7 +889,7 @@ private fun rememberArtworkLuminance(imageUrl: String?): Float? {
             val lum = withContext(Dispatchers.Default) {
                 bitmap.topAreaLuminance()
             }
-            artworkLuminanceCache.put(imageUrl, lum)
+            luminanceCache.put(imageUrl, lum)
             luminance = lum
         } else {
             // Default to dark artwork (0f) so status bar icons stay light if image fails to load
@@ -935,6 +940,8 @@ private data class TranslationParticle(
  * glyphs, a volume capsule flanked by speaker icons, and lyrics / AirPlay /
  * queue along the bottom.
  */
+
+
 @Composable
 fun NowPlayingScreen(
     song: Song,
@@ -1025,9 +1032,9 @@ fun NowPlayingScreen(
     docked: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
-    val context = LocalContext.current
-    val density = LocalDensity.current
-    val haptics = rememberHaptics()
+    val isNight = isSystemInDarkTheme()
+    val contentColor = if (isNight) Color.White else Color(0xFF1C1C1E)
+    val secondaryContentColor = contentColor.copy(alpha = if (isNight) 0.55f else 0.65f)
 
     // Keep the header caption and the system glyphs on the same contrast
     // decision. The caption sits over the same upper part of the cover as the
@@ -1041,6 +1048,9 @@ fun NowPlayingScreen(
     if (!docked) {
         SystemBarIcons(dark = isLightArtwork)
     }
+    val context = LocalContext.current
+    val density = LocalDensity.current
+    val haptics = rememberHaptics()
 
     // Kept local to the player: a modal player is not in the page's Haze
     // source tree, so it needs its own source for the same frosted material as
@@ -1097,7 +1107,7 @@ fun NowPlayingScreen(
     // a pixel readback of its own on every track change, and the two answer the
     // same picture in two different ways, so whichever is not on screen is pure
     // cost — the legacy path pays [rememberArtworkColors] instead.
-    val artMesh = if (legacyMesh) null else rememberArtworkMesh(song.thumbnailUrl, canvasFrame, ART_PX)
+    val artMesh = if (legacyMesh) null else rememberArtworkMesh(song.thumbnailUrl, canvasFrame, ART_PX, isNight)
     // Asked of every clip, Spotify's Canvas and every other source alike — see
     // CanvasArtworkPlayer's refreshFrameEveryMs. A clip's own colours move as
     // it plays regardless of who published it, and the backdrop should follow.
@@ -1473,10 +1483,10 @@ fun NowPlayingScreen(
 
     // Signature Apple Music touch: the sleeve shrinks back while paused.
     val artScale by animateFloatAsState(
-        targetValue = if (isPlaying) 1f else 0.86f,
+        targetValue = if (isPlaying) 1f else 0.82f,
         animationSpec = spring(
-            dampingRatio = Spring.DampingRatioLowBouncy,
-            stiffness = Spring.StiffnessLow,
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMediumLow,
         ),
         label = "artScale",
     )
@@ -1814,6 +1824,8 @@ fun NowPlayingScreen(
                         controlsOpen = true,
                         onRevealControls = {},
                         onHideControls = {},
+                        contentColor = contentColor,
+                        isNight = isNight,
                         translationProgress = particleProgress,
                         modifier = Modifier.fillMaxSize(),
                     )
@@ -1928,7 +1940,7 @@ fun NowPlayingScreen(
                 Text(
                     text = wideLyricsStatus,
                     style = MaterialTheme.typography.titleMedium,
-                    color = Color.White.copy(alpha = 0.55f),
+                    color = contentColor.copy(alpha = if (isNight) 0.55f else 0.65f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = statusModifier.padding(vertical = 4.dp),
@@ -1942,17 +1954,21 @@ fun NowPlayingScreen(
                             positionMs = lyricsPositionMs,
                             isPlaying = isPlaying,
                             durationMs = durationMs,
+                            contentColor = contentColor,
+                            isNight = isNight,
                             onClick = openLyrics,
                             modifier = Modifier.fillMaxWidth(),
                         )
                     } else if (lyricsUnavailable) {
                         LyricsUnavailableLine(
                             trackKey = song.videoId,
+                            contentColor = contentColor,
                             modifier = Modifier.fillMaxWidth(),
                         )
                     } else {
                         LyricsLoadingLine(
                             text = lyricsLoadingText,
+                            contentColor = contentColor,
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
@@ -1973,6 +1989,8 @@ fun NowPlayingScreen(
                     onRemove = onRemoveFromQueue,
                     onMove = onMoveInQueue,
                     onClear = onClearQueue,
+                    contentColor = contentColor,
+                    isNight = isNight,
                     modifier = Modifier.weight(1f),
                 )
             }
@@ -2030,6 +2048,8 @@ fun NowPlayingScreen(
             canvasFrame = canvasFrame,
             artMesh = artMesh,
             progress = wideSplit,
+            contentColor = contentColor,
+            isNight = isNight,
         )
         // The output drawer and the pipeline dialog are drawn by the phone
         // layout below, past the `return` this branch takes — so without
@@ -2083,11 +2103,13 @@ fun NowPlayingScreen(
             MeshGradientBackground(
                 palette = rememberArtworkColors(song.thumbnailUrl, canvasFrame),
                 trackKey = song.videoId,
+                isNight = isNight,
             )
         } else {
             ArtworkMeshBackdrop(
                 mesh = artMesh,
                 seam = if (heroMode) heroHeight else 0.dp,
+                isNight = isNight,
             )
         }
 
@@ -2652,10 +2674,10 @@ fun NowPlayingScreen(
                             // it just reads as a second, darker square ringing
                             // the first. Only cast it once there's actually art.
                             .shadow(
-                                if (artLoaded) lerp(14.dp, 6.dp, p) else 0.dp,
-                                RoundedCornerShape(lerp(10.dp, 7.dp, p)),
+                                if (artLoaded) lerp(40.dp, 8.dp, p) else 0.dp,
+                                RoundedCornerShape(lerp(24.dp, 8.dp, p)),
                             )
-                            .clip(RoundedCornerShape(lerp(10.dp, 7.dp, p)))
+                            .clip(RoundedCornerShape(lerp(24.dp, 8.dp, p)))
                             .background(Color.Black.copy(alpha = 0.18f)),
                         contentAlignment = Alignment.Center,
                     ) {
@@ -2663,7 +2685,7 @@ fun NowPlayingScreen(
                             Icon(
                                 imageVector = BitChordIcons.MusicNote,
                                 contentDescription = null,
-                                tint = Color.White.copy(alpha = 0.35f),
+                                tint = contentColor.copy(alpha = 0.35f),
                                 modifier = Modifier.size(lerp(40.dp, 20.dp, p)),
                             )
                         }
@@ -2764,7 +2786,7 @@ fun NowPlayingScreen(
                                 Text(
                                     text = stats,
                                     style = nerdStyle,
-                                    color = Color.White.copy(alpha = 0.65f),
+                                    color = contentColor.copy(alpha = 0.65f),
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
                                     textAlign = TextAlign.Center,
@@ -2792,7 +2814,7 @@ fun NowPlayingScreen(
                                     // Dimmer than the measured line above it: that
                                     // one describes the audio, this one describes
                                     // the app, and the ranking should show.
-                                    color = Color.White.copy(alpha = 0.5f),
+                                    color = contentColor.copy(alpha = 0.5f),
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
                                     textAlign = TextAlign.Center,
@@ -2821,6 +2843,8 @@ fun NowPlayingScreen(
                         loading = audioVersionSwitching,
                         onClick = onToggleAudioVersion,
                         hazeState = playerHaze,
+                        contentColor = contentColor,
+                        isNight = isNight,
                         modifier = Modifier
                             .align(Alignment.TopCenter)
                             .offset(y = artTop + VERSION_PILL_ART_INSET),
@@ -2846,7 +2870,7 @@ fun NowPlayingScreen(
                     Icon(
                         imageVector = if (showNext) Icons.Rounded.FastForward else Icons.Rounded.FastRewind,
                         contentDescription = null,
-                        tint = Color.White.copy(
+                        tint = contentColor.copy(
                             alpha = swipeHintProgress * if (enabled) 0.85f else 0.3f,
                         ),
                         modifier = Modifier
@@ -2880,7 +2904,7 @@ fun NowPlayingScreen(
                     Column(Modifier.weight(1f)) {
                         // Shrinks as the header collapses, so the queue's
                         // heading doesn't have to compete with it.
-                        val titleSize = lerp(20.sp, 16.sp, p)
+                        val titleSize = lerp(28.sp, 17.sp, p)
                         // Only the title's own overflow gates the artist's stagger
                         // below — an artist line that's long on its own has no
                         // reason to wait on a title that already fits.
@@ -2894,11 +2918,13 @@ fun NowPlayingScreen(
                             text = song.title,
                             style = MaterialTheme.typography.titleLarge.copy(
                                 fontSize = titleSize,
+                                fontWeight = FontWeight.W800,
+                                letterSpacing = (-0.5).sp,
                             ),
-                            color = Color.White,
+                            color = contentColor,
                             enabled = scrolls,
                             leading = if (song.isExplicit == true) {
-                                { ExplicitBadge(color = Color.White) }
+                                { ExplicitBadge(color = contentColor) }
                             } else {
                                 null
                             },
@@ -2912,8 +2938,9 @@ fun NowPlayingScreen(
                             style = MaterialTheme.typography.titleLarge.copy(
                                 fontWeight = FontWeight.W500,
                                 fontSize = titleSize,
+                                letterSpacing = (-0.3).sp,
                             ),
-                            color = Color.White.copy(alpha = 0.55f),
+                            color = contentColor.copy(alpha = if (isNight) 0.55f else 0.65f),
                             enabled = scrolls,
                             // A title that's also scrolling gets to go first —
                             // starting together reads as clutter, so the artist
@@ -2939,6 +2966,8 @@ fun NowPlayingScreen(
                             onClick = onToggleLike,
                             active = liked,
                             haptic = if (liked) Haptic.ToggleOff else Haptic.ToggleOn,
+                            contentColor = contentColor,
+                            isNight = isNight,
                         )
                         Spacer(Modifier.width(8.dp))
                     }
@@ -2946,6 +2975,8 @@ fun NowPlayingScreen(
                         icon = if (showRevertCue) Icons.AutoMirrored.Rounded.Undo else Icons.Rounded.MoreHoriz,
                         contentDescription = stringResource(R.string.more),
                         onClick = onOpenMenu,
+                        contentColor = contentColor,
+                        isNight = isNight,
                     )
                 }
 
@@ -2974,6 +3005,8 @@ fun NowPlayingScreen(
                                 controlsOpen = lyricsControlsOpen,
                                 onRevealControls = { lyricsControlsOpen = true },
                                 onHideControls = { lyricsControlsOpen = false },
+                                contentColor = contentColor,
+                                isNight = isNight,
                                 translationProgress = particleProgress,
                                 onScrollingChange = { lyricsScrolling = it },
                                 modifier = Modifier.fillMaxSize(),
@@ -3046,6 +3079,8 @@ fun NowPlayingScreen(
                             onRemove = onRemoveFromQueue,
                             onMove = onMoveInQueue,
                             onClear = onClearQueue,
+                            contentColor = contentColor,
+                            isNight = isNight,
                             onScrollingChange = { queueScrolling = it },
                             modifier = Modifier.weight(1f),
                         )
@@ -3100,6 +3135,8 @@ fun NowPlayingScreen(
                             positionMs = lyricsPositionMs,
                             isPlaying = isPlaying,
                             durationMs = durationMs,
+                            contentColor = contentColor,
+                            isNight = isNight,
                             // Still visible over the queue, so still a valid way
                             // in: opens the same full lyrics panel it always has,
                             // closing the queue behind it the same way the "Up
@@ -3110,11 +3147,13 @@ fun NowPlayingScreen(
                     } else if (lyricsUnavailable) {
                         LyricsUnavailableLine(
                             trackKey = song.videoId,
+                            contentColor = contentColor,
                             modifier = Modifier.fillMaxWidth(),
                         )
                     } else {
                         LyricsLoadingLine(
                             text = lyricsLoadingText,
+                            contentColor = contentColor,
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
@@ -3146,7 +3185,7 @@ fun NowPlayingScreen(
                         else -> stringResource(R.string.lyrics_saved_with_download)
                     },
                     style = MaterialTheme.typography.titleMedium,
-                    color = Color.White.copy(alpha = 0.55f),
+                    color = contentColor.copy(alpha = if (isNight) 0.55f else 0.65f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier
@@ -3182,6 +3221,9 @@ fun NowPlayingScreen(
                 transitionWindow = transitionWindow
                     ?.takeIf { !scrubbing && it.end > it.start }
                     ?.let { it.start..it.end },
+                activeColor = contentColor.copy(alpha = if (isNight) 0.92f else 0.82f),
+                inactiveColor = contentColor.copy(alpha = if (isNight) 0.20f else 0.15f),
+                markerColor = contentColor.copy(alpha = if (isNight) 0.5f else 0.4f),
             )
             val wifiQuality by AppSettings.audioQualityWifi.collectAsStateWithLifecycle()
             val cellularQuality by AppSettings.audioQualityCellular.collectAsStateWithLifecycle()
@@ -3215,12 +3257,12 @@ fun NowPlayingScreen(
                     Text(
                         text = formatTime((shown * durationMs).toLong()),
                         style = MaterialTheme.typography.labelMedium,
-                        color = Color.White.copy(alpha = 0.55f),
+                        color = contentColor.copy(alpha = if (isNight) 0.55f else 0.65f),
                     )
                     Text(
                         text = "-" + formatTime(durationMs - (shown * durationMs).toLong()),
                         style = MaterialTheme.typography.labelMedium,
-                        color = Color.White.copy(alpha = 0.55f),
+                        color = contentColor.copy(alpha = if (isNight) 0.55f else 0.65f),
                     )
                 }
                 // Pinned to the box's own center rather than squeezed into the
@@ -3235,6 +3277,7 @@ fun NowPlayingScreen(
                     effectiveQuality = effectiveQuality,
                     nerdStats = nerdStats,
                     onBadgeClick = { showAudioPipeline = true },
+                    contentColor = contentColor,
                     modifier = Modifier
                         .align(Alignment.Center)
                         .padding(horizontal = 8.dp),
@@ -3259,6 +3302,7 @@ fun NowPlayingScreen(
                     icon = R.drawable.ic_player_previous,
                     contentDescription = stringResource(R.string.widget_previous),
                     size = 48.dp,
+                    contentColor = contentColor,
                     onClick = onPrevious,
                     // Lit whenever back has something to do — either a track to
                     // step to, or enough elapsed for it to restart this one.
@@ -3272,7 +3316,7 @@ fun NowPlayingScreen(
                     // here would shunt everything below it on every load.
                     Box(Modifier.size(100.dp), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator(
-                            color = Color.White,
+                            color = contentColor,
                             strokeWidth = 3.dp,
                             modifier = Modifier.size(38.dp),
                         )
@@ -3283,6 +3327,7 @@ fun NowPlayingScreen(
                         contentDescription = stringResource(if (isPlaying) R.string.pause else R.string.play),
                         size = 72.dp,
                         touchSize = 100.dp,
+                        contentColor = contentColor,
                         onClick = onPlayPause,
                         haptic = if (isPlaying) Haptic.Pause else Haptic.Resume,
                     )
@@ -3291,6 +3336,7 @@ fun NowPlayingScreen(
                     icon = R.drawable.ic_player_next,
                     contentDescription = stringResource(R.string.widget_next),
                     size = 48.dp,
+                    contentColor = contentColor,
                     onClick = onNext,
                     enabled = hasNext,
                     haptic = Haptic.SkipNext,
@@ -3312,7 +3358,7 @@ fun NowPlayingScreen(
                     Icon(
                         Icons.AutoMirrored.Rounded.VolumeDown,
                         contentDescription = null,
-                        tint = Color.White.copy(alpha = 0.5f),
+                        tint = contentColor.copy(alpha = if (isNight) 0.5f else 0.4f),
                         modifier = Modifier.size(20.dp),
                     )
                     Spacer(Modifier.width(10.dp))
@@ -3331,13 +3377,16 @@ fun NowPlayingScreen(
                         onValueChangeFinished = { volumeDragging = false },
                         idleHeight = 6.dp,
                         activeHeight = 10.dp,
+                        activeColor = contentColor.copy(alpha = if (isNight) 0.92f else 0.82f),
+                        inactiveColor = contentColor.copy(alpha = if (isNight) 0.20f else 0.15f),
+                        markerColor = contentColor.copy(alpha = if (isNight) 0.5f else 0.4f),
                         modifier = Modifier.weight(1f),
                     )
                     Spacer(Modifier.width(10.dp))
                     Icon(
                         Icons.AutoMirrored.Rounded.VolumeUp,
                         contentDescription = null,
-                        tint = Color.White.copy(alpha = 0.5f),
+                        tint = contentColor.copy(alpha = if (isNight) 0.5f else 0.4f),
                         modifier = Modifier.size(20.dp),
                     )
                 }
@@ -3375,6 +3424,7 @@ fun NowPlayingScreen(
                     // was up, at which point both could be lit at once.
                     onClick = toggleLyrics,
                     highlighted = lyricsOpen,
+                    contentColor = contentColor,
                 )
                 AnimatedContent(
                     targetState = queueOpen,
@@ -3398,6 +3448,7 @@ fun NowPlayingScreen(
                                 highlighted = shuffleEnabled,
                                 haptic = if (shuffleEnabled) Haptic.ToggleOff else Haptic.ToggleOn,
                                 tapWindowMs = SHUFFLE_TAP_WINDOW_MS,
+                                contentColor = contentColor,
                             )
                             PillDivider()
                             PillSegment(
@@ -3419,6 +3470,7 @@ fun NowPlayingScreen(
                                     Player.REPEAT_MODE_ONE -> Haptic.ToggleOff
                                     else -> Haptic.Select
                                 },
+                                contentColor = contentColor,
                             )
                             PillDivider()
                             PillSegment(
@@ -3430,12 +3482,15 @@ fun NowPlayingScreen(
                                 highlighted = autoplayEnabled,
                                 haptic = if (autoplayEnabled) Haptic.ToggleOff else Haptic.ToggleOn,
                                 tapWindowMs = AUTOPLAY_TAP_WINDOW_MS,
+                                contentColor = contentColor,
                             )
                         }
                     } else {
                         OutputPartyPill(
                             onOutput = openAudioOutput,
                             onParty = onListenTogether,
+                            contentColor = contentColor,
+                            audioOutputOpen = showAudioOutput,
                         )
                     }
                 }
@@ -3448,6 +3503,7 @@ fun NowPlayingScreen(
                     },
                     highlighted = queueOpen,
                     haptic = if (queueOpen) Haptic.Tap else Haptic.Expand,
+                    contentColor = contentColor,
                 )
             }
             }
@@ -3459,6 +3515,7 @@ fun NowPlayingScreen(
             ) {
                 OutputCaption(
                     accountName = accountName,
+                    contentColor = contentColor,
                     onOpenOutput = openAudioOutput,
                     onOpenParty = onListenTogether,
                 )
@@ -3658,6 +3715,8 @@ private fun WidePlayerControls(
      * `wideSplit` there.
      */
     progress: Float,
+    contentColor: Color,
+    isNight: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val haptics = rememberHaptics()
@@ -3762,6 +3821,7 @@ private fun WidePlayerControls(
                     icon = R.drawable.ic_player_previous,
                     contentDescription = stringResource(R.string.widget_previous),
                     size = 48.dp,
+                    contentColor = contentColor,
                     onClick = onPrevious,
                     enabled = hasPrevious || positionMs > BACK_RESTARTS_AFTER_MS,
                     haptic = Haptic.SkipPrevious,
@@ -3769,7 +3829,7 @@ private fun WidePlayerControls(
                 if (isLoading) {
                     Box(Modifier.size(100.dp), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator(
-                            color = Color.White,
+                            color = contentColor,
                             strokeWidth = 3.dp,
                             modifier = Modifier.size(30.dp),
                         )
@@ -3782,6 +3842,7 @@ private fun WidePlayerControls(
                         ),
                         size = 72.dp,
                         touchSize = 100.dp,
+                        contentColor = contentColor,
                         onClick = onPlayPause,
                         haptic = if (isPlaying) Haptic.Pause else Haptic.Resume,
                     )
@@ -3790,6 +3851,7 @@ private fun WidePlayerControls(
                     icon = R.drawable.ic_player_next,
                     contentDescription = stringResource(R.string.widget_next),
                     size = 48.dp,
+                    contentColor = contentColor,
                     onClick = onNext,
                     enabled = hasNext,
                     haptic = Haptic.SkipNext,
@@ -3875,6 +3937,7 @@ private fun WidePlayerControls(
                         ),
                         onClick = onToggleLyrics,
                         highlighted = lyricsOpen,
+                        contentColor = contentColor,
                     )
                     // The capsule the phone swaps in on exactly this condition:
                     // the output pair normally, the three playback modes while
@@ -3901,6 +3964,7 @@ private fun WidePlayerControls(
                                     highlighted = shuffleEnabled,
                                     haptic = if (shuffleEnabled) Haptic.ToggleOff else Haptic.ToggleOn,
                                     tapWindowMs = SHUFFLE_TAP_WINDOW_MS,
+                                    contentColor = contentColor,
                                 )
                                 PillDivider()
                                 PillSegment(
@@ -3918,6 +3982,7 @@ private fun WidePlayerControls(
                                         else -> Haptic.Select
                                     },
                                     highlighted = repeatMode != Player.REPEAT_MODE_OFF,
+                                    contentColor = contentColor,
                                 )
                                 PillDivider()
                                 PillSegment(
@@ -3928,11 +3993,16 @@ private fun WidePlayerControls(
                                     onClick = onToggleAutoplay,
                                     highlighted = autoplayEnabled,
                                     haptic = if (autoplayEnabled) Haptic.ToggleOff else Haptic.ToggleOn,
+                                    contentColor = contentColor,
                                     tapWindowMs = AUTOPLAY_TAP_WINDOW_MS,
                                 )
                             }
                         } else {
-                            OutputPartyPill(onOutput = onOpenOutput, onParty = onListenTogether)
+                            OutputPartyPill(
+                                onOutput = onOpenOutput,
+                                onParty = onListenTogether,
+                                contentColor = contentColor,
+                            )
                         }
                     }
                     BottomGlyph(
@@ -3941,6 +4011,7 @@ private fun WidePlayerControls(
                         onClick = onToggleQueue,
                         highlighted = queueOpen,
                         haptic = if (queueOpen) Haptic.Tap else Haptic.Expand,
+                        contentColor = contentColor,
                     )
                 }
             }
@@ -3959,6 +4030,7 @@ private fun WidePlayerControls(
             ) {
                 OutputCaption(
                     accountName = accountName,
+                    contentColor = contentColor,
                     onOpenOutput = onOpenOutput,
                     onOpenParty = onListenTogether,
                 )
@@ -4209,6 +4281,8 @@ private fun WideCredits(
                 onClick = onToggleLike,
                 active = liked,
                 haptic = if (liked) Haptic.ToggleOff else Haptic.ToggleOn,
+                contentColor = Color.White,
+                isNight = true,
             )
             Spacer(Modifier.width(8.dp))
         }
@@ -4216,6 +4290,8 @@ private fun WideCredits(
             icon = Icons.Rounded.MoreHoriz,
             contentDescription = stringResource(R.string.more),
             onClick = onOpenMenu,
+            contentColor = Color.White,
+            isNight = true,
         )
     }
 }
@@ -4286,6 +4362,8 @@ private fun SweptLyricLine(
     clock: MutableLongState,
     style: TextStyle,
     dimAlpha: Float,
+    contentColor: Color,
+    isNight: Boolean,
     modifier: Modifier = Modifier,
     maxLines: Int = Int.MAX_VALUE,
     overflow: TextOverflow = TextOverflow.Clip,
@@ -4378,7 +4456,7 @@ private fun SweptLyricLine(
         Text(
             text = line.text,
             style = style,
-            color = Color.White.copy(alpha = dimAlpha),
+            color = contentColor.copy(alpha = dimAlpha),
             maxLines = maxLines,
             overflow = overflow,
             onTextLayout = { layout = it },
@@ -4388,7 +4466,7 @@ private fun SweptLyricLine(
             Text(
                 text = line.text,
                 style = style,
-                color = Color.White,
+                color = contentColor,
                 maxLines = maxLines,
                 overflow = overflow,
                 modifier = Modifier
@@ -4420,7 +4498,7 @@ private fun SweptLyricLine(
         Text(
             text = line.text,
             style = style,
-            color = Color.White,
+            color = if (isNight) Color.White else contentColor,
             maxLines = maxLines,
             overflow = overflow,
             // The feather erases into this layer, so the layer has to exist —
@@ -5012,6 +5090,8 @@ private fun LyricsPanel(
     controlsOpen: Boolean,
     onRevealControls: () -> Unit,
     onHideControls: () -> Unit,
+    contentColor: Color,
+    isNight: Boolean,
     translationProgress: State<Float>? = null,
     /** Reports whether the lyric list is mid-scroll, so the player above it
      * can stand down its own swipe gestures for as long as it is. */
@@ -5261,7 +5341,7 @@ private fun LyricsPanel(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(6.dp))
-                            .background(Color.White.copy(alpha = 0.14f))
+                            .background(contentColor.copy(alpha = 0.14f))
                             .padding(horizontal = 11.dp, vertical = 4.dp),
                     ) {
                         Text(
@@ -5271,7 +5351,7 @@ private fun LyricsPanel(
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 11.5.sp,
                             ),
-                            color = Color.White.copy(alpha = 0.9f),
+                            color = contentColor.copy(alpha = 0.9f),
                         )
                     }
                 }
@@ -5521,6 +5601,8 @@ private fun LyricsPanel(
                             browsing = browsing,
                             glowAlpha = glow,
                             room = GLOW_ROOM,
+                            contentColor = contentColor,
+                            isNight = isNight,
                             alignEnd = alignEnd,
                             // Only the rows actually in front of the reader get the
                             // particle pass. Sixty rows' worth of glyph boxes is a
@@ -5548,6 +5630,8 @@ private fun LyricsPanel(
                                 // the thing this split exists to stop.
                                 glowAlpha = 0f,
                                 room = 0.dp,
+                                contentColor = contentColor,
+                                isNight = isNight,
                                 alignEnd = alignEnd,
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -5590,6 +5674,8 @@ private fun PanelVoice(
     room: Dp,
     /** Whether this line is one of the right-hand voice's; see [LyricAlignment]. */
     alignEnd: Boolean,
+    contentColor: Color,
+    isNight: Boolean,
     translationProgress: State<Float>? = null,
     modifier: Modifier = Modifier,
 ) {
@@ -5612,6 +5698,8 @@ private fun PanelVoice(
             clock = clock,
             style = style,
             dimAlpha = tail,
+            contentColor = contentColor,
+            isNight = isNight,
             modifier = modifier,
             glowAlpha = glowAlpha,
             glowRoom = room,
@@ -5633,6 +5721,8 @@ private fun PanelVoice(
             clock = clock,
             style = style,
             dimAlpha = tail,
+            contentColor = contentColor,
+            isNight = isNight,
             modifier = modifier,
             glowAlpha = 0f,
             glowRoom = room,
@@ -5657,7 +5747,7 @@ private fun PanelVoice(
         Text(
             text = line.text,
             style = style,
-            color = Color.White.copy(alpha = lit),
+            color = (if (isNight) Color.White else contentColor).copy(alpha = lit),
             onTextLayout = { layout = it },
             modifier = modifier.lyricParticles(layout, translationProgress, room).padding(room),
         )
@@ -5700,6 +5790,8 @@ private fun CurrentLyricLine(
     positionMs: Long,
     isPlaying: Boolean,
     durationMs: Long,
+    contentColor: Color,
+    isNight: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -5715,14 +5807,14 @@ private fun CurrentLyricLine(
             Icon(
                 imageVector = BitChordIcons.MusicNote,
                 contentDescription = null,
-                tint = Color.White,
+                tint = contentColor,
                 modifier = Modifier.size(16.dp),
             )
             Spacer(Modifier.width(6.dp))
             Text(
                 text = stringResource(R.string.open_lyrics),
                 style = MaterialTheme.typography.titleMedium,
-                color = Color.White,
+                color = contentColor,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f, fill = false),
@@ -5731,7 +5823,7 @@ private fun CurrentLyricLine(
             Icon(
                 imageVector = BitChordIcons.ChevronRight,
                 contentDescription = null,
-                tint = Color.White.copy(alpha = 0.5f),
+                tint = contentColor.copy(alpha = 0.5f),
                 modifier = Modifier.size(14.dp),
             )
         }
@@ -5781,7 +5873,7 @@ private fun CurrentLyricLine(
             Icon(
                 imageVector = BitChordIcons.MusicNote,
                 contentDescription = null,
-                tint = Color.White,
+                tint = contentColor,
                 modifier = Modifier.size(16.dp),
             )
             Spacer(Modifier.width(6.dp))
@@ -5816,6 +5908,8 @@ private fun CurrentLyricLine(
                     clock = clock,
                     style = MaterialTheme.typography.titleMedium,
                     dimAlpha = UNSUNG_ALPHA_STRIP,
+                    contentColor = contentColor,
+                    isNight = isNight,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     rise = false,
@@ -5824,7 +5918,7 @@ private fun CurrentLyricLine(
                 Text(
                     text = lineText,
                     style = MaterialTheme.typography.titleMedium,
-                    color = if (itemInstrumental) Color.White.copy(alpha = 0.5f) else Color.White,
+                    color = if (itemInstrumental) contentColor.copy(alpha = 0.5f) else contentColor,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -5835,7 +5929,7 @@ private fun CurrentLyricLine(
         Icon(
             imageVector = BitChordIcons.ChevronRight,
             contentDescription = null,
-            tint = Color.White.copy(alpha = 0.5f),
+            tint = contentColor.copy(alpha = 0.5f),
             modifier = Modifier.size(14.dp),
         )
     }
@@ -5847,7 +5941,7 @@ private fun CurrentLyricLine(
  * out or lingering for the rest of the track.
  */
 @Composable
-private fun LyricsUnavailableLine(trackKey: Any, modifier: Modifier = Modifier) {
+private fun LyricsUnavailableLine(trackKey: Any, contentColor: Color, modifier: Modifier = Modifier) {
     var visible by remember(trackKey) { mutableStateOf(true) }
     LaunchedEffect(trackKey) {
         delay(LYRICS_UNAVAILABLE_HOLD_MS)
@@ -5861,7 +5955,7 @@ private fun LyricsUnavailableLine(trackKey: Any, modifier: Modifier = Modifier) 
     Text(
         text = stringResource(R.string.lyrics_not_available),
         style = MaterialTheme.typography.titleMedium,
-        color = Color.White,
+        color = contentColor,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
         modifier = modifier
@@ -5872,11 +5966,11 @@ private fun LyricsUnavailableLine(trackKey: Any, modifier: Modifier = Modifier) 
 
 /** Stands in for [CurrentLyricLine] while a lookup is still in flight. */
 @Composable
-private fun LyricsLoadingLine(text: String, modifier: Modifier = Modifier) {
+private fun LyricsLoadingLine(text: String, contentColor: Color, modifier: Modifier = Modifier) {
     Text(
         text = text,
         style = MaterialTheme.typography.titleMedium,
-        color = Color.White.copy(alpha = 0.55f),
+        color = contentColor.copy(alpha = 0.55f),
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
         modifier = modifier.padding(vertical = 4.dp),
@@ -5890,6 +5984,8 @@ private fun VideoAudioVersionButton(
     loading: Boolean,
     onClick: () -> Unit,
     hazeState: HazeState,
+    contentColor: Color,
+    isNight: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val haptics = rememberHaptics()
@@ -5903,9 +5999,9 @@ private fun VideoAudioVersionButton(
                 // The opaque surface used by the nav bar is too dark over a
                 // player cover. A faint material tint keeps the same glass
                 // blur while letting the artwork's colour show through.
-                style = HazeMaterials.regular(MaterialTheme.colorScheme.surface.copy(alpha = 0.16f)),
+                style = HazeMaterials.regular(MaterialTheme.colorScheme.surface.copy(alpha = if (isNight) 0.16f else 0.08f)),
             )
-            .background(Color.White.copy(alpha = 0.04f)),
+            .background(contentColor.copy(alpha = if (isNight) 0.04f else 0.08f)),
         contentAlignment = Alignment.Center,
     ) {
         Row(
@@ -5917,6 +6013,7 @@ private fun VideoAudioVersionButton(
                 contentDescription = stringResource(R.string.revert_to_original),
                 selected = !audioVersion,
                 enabled = audioVersion && !loading,
+                contentColor = contentColor,
                 onClick = {
                     haptics.play(Haptic.Tap)
                     onClick()
@@ -5927,6 +6024,7 @@ private fun VideoAudioVersionButton(
                 contentDescription = stringResource(R.string.convert_to_audio),
                 selected = audioVersion,
                 enabled = !audioVersion && !loading,
+                contentColor = contentColor,
                 onClick = {
                     haptics.play(Haptic.Tap)
                     onClick()
@@ -5943,6 +6041,7 @@ private fun VideoAudioTab(
     contentDescription: String,
     selected: Boolean,
     enabled: Boolean,
+    contentColor: Color,
     onClick: () -> Unit,
     loading: Boolean = false,
 ) {
@@ -5950,7 +6049,7 @@ private fun VideoAudioTab(
         modifier = Modifier
             .size(38.dp)
             .clip(CircleShape)
-            .background(Color.White.copy(alpha = if (selected) 0.20f else 0f))
+            .background(contentColor.copy(alpha = if (selected) 0.20f else 0f))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
@@ -5962,14 +6061,14 @@ private fun VideoAudioTab(
         if (loading) {
             CircularProgressIndicator(
                 modifier = Modifier.size(17.dp),
-                color = Color.White,
+                color = contentColor,
                 strokeWidth = 2.dp,
             )
         } else {
             Icon(
                 imageVector = icon,
                 contentDescription = contentDescription,
-                tint = Color.White.copy(alpha = if (selected) 1f else 0.58f),
+                tint = contentColor.copy(alpha = if (selected) 1f else 0.58f),
                 modifier = Modifier.size(19.dp),
             )
         }
@@ -5988,22 +6087,46 @@ private fun VideoAudioTab(
 private fun CircleGlyph(
     icon: ImageVector,
     contentDescription: String,
+    contentColor: Color,
+    isNight: Boolean,
     onClick: () -> Unit,
     active: Boolean = false,
     haptic: Haptic = Haptic.Tap,
 ) {
     val haptics = rememberHaptics()
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.85f else 1f,
+        animationSpec = spring(
+            stiffness = Spring.StiffnessMediumLow,
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+        ),
+        label = "circleGlyphScale",
+    )
     val discAlpha by animateFloatAsState(
-        targetValue = if (active) 0.34f else 0.18f,
+        targetValue = if (active) 0.34f else if (isNight) 0.18f else 0.12f,
         label = "glyphDisc",
+    )
+    val heartPopScale by animateFloatAsState(
+        targetValue = if (active) 1.22f else 1f,
+        animationSpec = spring(
+            stiffness = Spring.StiffnessMediumLow,
+            dampingRatio = Spring.DampingRatioHighBouncy,
+        ),
+        label = "heartPopScale",
     )
     Box(
         modifier = Modifier
             .size(34.dp)
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
             .clip(CircleShape)
-            .background(Color.White.copy(alpha = discAlpha))
+            .background(contentColor.copy(alpha = discAlpha))
             .clickable(
-                interactionSource = remember { MutableInteractionSource() },
+                interactionSource = interactionSource,
                 indication = null,
             ) {
                 haptics.play(haptic)
@@ -6019,8 +6142,15 @@ private fun CircleGlyph(
             Icon(
                 imageVector = glyph,
                 contentDescription = contentDescription,
-                tint = Color.White,
-                modifier = Modifier.size(19.dp),
+                tint = if (active) AccentRed else contentColor,
+                modifier = Modifier
+                    .size(19.dp)
+                    .graphicsLayer {
+                        if (active) {
+                            scaleX = heartPopScale
+                            scaleY = heartPopScale
+                        }
+                    },
             )
         }
     }
@@ -6037,12 +6167,22 @@ private fun TransportGlyph(
     contentDescription: String,
     size: androidx.compose.ui.unit.Dp,
     touchSize: androidx.compose.ui.unit.Dp = size,
+    contentColor: Color = Color.White,
     onClick: () -> Unit,
     enabled: Boolean = true,
     haptic: Haptic = Haptic.Tap,
 ) {
     val haptics = rememberHaptics()
-    // Faded rather than hidden: the row keeps its shape at the ends of a queue.
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.82f else 1f,
+        animationSpec = spring(
+            stiffness = Spring.StiffnessMediumLow,
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+        ),
+        label = "transportScale",
+    )
     val alpha by animateFloatAsState(
         targetValue = if (enabled) 1f else 0.3f,
         label = "transportAlpha",
@@ -6050,8 +6190,12 @@ private fun TransportGlyph(
     Box(
         modifier = Modifier
             .size(touchSize)
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
             .clickable(
-                interactionSource = remember { MutableInteractionSource() },
+                interactionSource = interactionSource,
                 indication = null,
                 enabled = enabled,
             ) {
@@ -6063,7 +6207,7 @@ private fun TransportGlyph(
         Icon(
             painter = painterResource(icon),
             contentDescription = contentDescription,
-            tint = Color.White.copy(alpha = alpha),
+            tint = contentColor.copy(alpha = alpha),
             modifier = Modifier.size(size),
         )
     }
@@ -6145,6 +6289,8 @@ private fun PillDivider() {
 private fun OutputPartyPill(
     onOutput: () -> Unit,
     onParty: () -> Unit,
+    contentColor: Color,
+    audioOutputOpen: Boolean = false,
 ) {
     val badge = rememberPartyBadge()
     Pill {
@@ -6153,6 +6299,8 @@ private fun OutputPartyPill(
             iconSize = PILL_HEADPHONES_SIZE,
             contentDescription = stringResource(R.string.audio_output),
             onClick = onOutput,
+            highlighted = audioOutputOpen,
+            contentColor = contentColor,
         )
         PillDivider()
         PillSegment(
@@ -6171,6 +6319,7 @@ private fun OutputPartyPill(
             },
             onClick = onParty,
             highlighted = badge.inParty,
+            contentColor = contentColor,
         )
     }
 }
@@ -6194,16 +6343,31 @@ private fun PillSegment(
     haptic: Haptic = Haptic.Tap,
     /** See [BottomGlyph], where the same window means the same thing. */
     tapWindowMs: Long = 0L,
+    contentColor: Color,
 ) {
     val haptics = rememberHaptics()
     val lastTap = remember { mutableLongStateOf(-tapWindowMs) }
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.85f else 1f,
+        animationSpec = spring(
+            stiffness = Spring.StiffnessMediumLow,
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+        ),
+        label = "pillSegmentScale",
+    )
     Box(
         modifier = Modifier
             .width(PILL_SEGMENT_WIDTH)
             .height(BOTTOM_ACTION_SIZE)
-            .background(if (highlighted) Color.White.copy(alpha = 0.14f) else Color.Transparent)
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
+            .background(if (highlighted) AccentRed.copy(alpha = 0.20f) else Color.Transparent)
             .clickable(
-                interactionSource = remember { MutableInteractionSource() },
+                interactionSource = interactionSource,
                 indication = null,
             ) {
                 val now = SystemClock.uptimeMillis()
@@ -6216,7 +6380,7 @@ private fun PillSegment(
             .semantics { this.contentDescription = contentDescription },
         contentAlignment = Alignment.Center,
     ) {
-        val tint = Color.White.copy(alpha = if (highlighted) 1f else 0.75f)
+        val tint = if (highlighted) AccentRed else contentColor.copy(alpha = 0.75f)
         if (icon != null) {
             Icon(
                 imageVector = icon,
@@ -6248,6 +6412,7 @@ private fun PillSegment(
 @Composable
 private fun OutputCaption(
     accountName: String?,
+    contentColor: Color = Color.White,
     onOpenOutput: () -> Unit,
     onOpenParty: () -> Unit,
 ) {
@@ -6261,7 +6426,7 @@ private fun OutputCaption(
     Text(
         text = if (badge.inParty) jamName else outputName,
         style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-        color = Color.White.copy(alpha = 0.55f),
+        color = contentColor.copy(alpha = 0.65f),
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
         textAlign = TextAlign.Center,
@@ -6310,6 +6475,7 @@ private fun rememberPartyBadge(): PartyBadge {
 private fun BottomGlyph(
     icon: ImageVector?,
     contentDescription: String,
+    contentColor: Color,
     onClick: () -> Unit,
     highlighted: Boolean = false,
     haptic: Haptic = Haptic.Tap,
@@ -6328,15 +6494,29 @@ private fun BottomGlyph(
     // costs no recomposition. Starts a full window in the past so the first tap
     // is never the one that gets swallowed.
     val lastTap = remember { mutableLongStateOf(-tapWindowMs) }
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.85f else 1f,
+        animationSpec = spring(
+            stiffness = Spring.StiffnessMediumLow,
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+        ),
+        label = "bottomGlyphScale",
+    )
     Box(
         modifier = Modifier
             .size(BOTTOM_ACTION_SIZE)
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
             .clip(CircleShape)
             .background(
-                if (highlighted) Color.White.copy(alpha = 0.20f) else Color.Transparent,
+                if (highlighted) AccentRed.copy(alpha = 0.20f) else Color.Transparent,
             )
             .clickable(
-                interactionSource = remember { MutableInteractionSource() },
+                interactionSource = interactionSource,
                 indication = null,
             ) {
                 val now = SystemClock.uptimeMillis()
@@ -6349,7 +6529,7 @@ private fun BottomGlyph(
             .semantics { this.contentDescription = contentDescription },
         contentAlignment = Alignment.Center,
     ) {
-        val tint = Color.White.copy(alpha = if (highlighted) 1f else 0.75f)
+        val tint = if (highlighted) AccentRed else contentColor.copy(alpha = 0.75f)
         if (icon != null) {
             Icon(
                 imageVector = icon,
@@ -6599,6 +6779,8 @@ private fun InlineQueue(
     onRemove: (Int) -> Unit,
     onMove: (Int, Int) -> Unit,
     onClear: () -> Unit,
+    contentColor: Color,
+    isNight: Boolean,
     onScrollingChange: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
@@ -6682,13 +6864,13 @@ private fun InlineQueue(
             Text(
                 text = stringResource(R.string.queue),
                 style = MaterialTheme.typography.titleLarge,
-                color = Color.White,
+                color = contentColor,
                 modifier = Modifier.weight(1f),
             )
             Text(
                 text = stringResource(R.string.clear),
                 style = MaterialTheme.typography.titleMedium,
-                color = Color.White.copy(alpha = 0.75f),
+                color = contentColor.copy(alpha = 0.75f),
                 modifier = Modifier
                     .clip(RoundedCornerShape(percent = 50))
                     .clickable(onClick = onClear)
@@ -6728,6 +6910,7 @@ private fun InlineQueue(
                     onDragStart = { manualDrag.onDragStart(key) },
                     onDrag = manualDrag::onDrag,
                     onDragEnd = manualDrag::onDragEnd,
+                    contentColor = contentColor,
                     modifier = Modifier
                         .zIndex(if (dragging) 1f else 0f)
                         .graphicsLayer { translationY = if (dragging) manualDrag.renderOffset else 0f }
@@ -6752,7 +6935,7 @@ private fun InlineQueue(
                         Icon(
                             BitChordIcons.Infinity,
                             contentDescription = null,
-                            tint = Color.White.copy(alpha = 0.75f),
+                            tint = contentColor.copy(alpha = 0.75f),
                             modifier = Modifier.size(18.dp),
                         )
                         Spacer(Modifier.width(8.dp))
@@ -6760,7 +6943,7 @@ private fun InlineQueue(
                             Text(
                                 text = stringResource(R.string.autoplay),
                                 style = MaterialTheme.typography.titleMedium,
-                                color = Color.White,
+                                color = contentColor,
                             )
                             Text(
                                 text = if (autoplayStart < queue.size) {
@@ -6769,7 +6952,7 @@ private fun InlineQueue(
                                     stringResource(R.string.autoplay_empty_description)
                                 },
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = Color.White.copy(alpha = 0.55f),
+                                color = contentColor.copy(alpha = 0.55f),
                             )
                         }
                     }
@@ -6792,6 +6975,7 @@ private fun InlineQueue(
                     onDragStart = { autoplayDrag.onDragStart(key) },
                     onDrag = autoplayDrag::onDrag,
                     onDragEnd = autoplayDrag::onDragEnd,
+                    contentColor = contentColor,
                     modifier = Modifier
                         .zIndex(if (dragging) 1f else 0f)
                         .graphicsLayer { translationY = if (dragging) autoplayDrag.renderOffset else 0f }
@@ -7197,6 +7381,7 @@ private fun InlineQueueRow(
     isCurrent: Boolean,
     onClick: () -> Unit,
     onRemove: () -> Unit,
+    contentColor: Color,
     modifier: Modifier = Modifier,
     draggable: Boolean = false,
     dragging: Boolean = false,
@@ -7223,7 +7408,7 @@ private fun InlineQueueRow(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
-            .background(if (dragging) Color.White.copy(alpha = 0.06f) else Color.Transparent)
+            .background(if (dragging) contentColor.copy(alpha = 0.06f) else Color.Transparent)
             .clickable(onClick = onClick)
             .padding(vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -7232,7 +7417,7 @@ private fun InlineQueueRow(
             Icon(
                 Icons.Rounded.DragHandle,
                 contentDescription = stringResource(R.string.drag_to_reorder),
-                tint = Color.White.copy(alpha = 0.4f),
+                tint = contentColor.copy(alpha = 0.4f),
                 modifier = Modifier
                     .size(20.dp)
                     // DragHandle's glyph sits well inset from the edges of
@@ -7260,19 +7445,19 @@ private fun InlineQueueRow(
                 .size(44.dp)
                 .clip(RoundedCornerShape(6.dp))
                 .thumbnailBorder(RoundedCornerShape(6.dp))
-                .background(Color.White.copy(alpha = 0.08f)),
+                .background(contentColor.copy(alpha = 0.08f)),
         )
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             ExplicitSongTitle(
                 song = song,
                 style = MaterialTheme.typography.titleMedium,
-                color = if (isCurrent) Color.White else Color.White.copy(alpha = 0.92f),
+                color = if (isCurrent) contentColor else contentColor.copy(alpha = 0.92f),
             )
             Text(
                 text = song.artist,
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color.White.copy(alpha = 0.55f),
+                color = contentColor.copy(alpha = 0.55f),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -7281,7 +7466,7 @@ private fun InlineQueueRow(
             Icon(
                 Icons.Rounded.GraphicEq,
                 contentDescription = stringResource(R.string.now_playing),
-                tint = Color.White,
+                tint = contentColor,
                 modifier = Modifier.size(18.dp),
             )
             Spacer(Modifier.width(10.dp))
@@ -7296,7 +7481,7 @@ private fun InlineQueueRow(
             Icon(
                 Icons.Rounded.Close,
                 contentDescription = stringResource(R.string.remove_from_queue),
-                tint = Color.White.copy(alpha = 0.55f),
+                tint = contentColor.copy(alpha = 0.55f),
                 modifier = Modifier.size(18.dp),
             )
         }
@@ -7326,6 +7511,7 @@ private fun LosslessOrStats(
     effectiveQuality: AudioQuality,
     nerdStats: NerdStats.Snapshot?,
     onBadgeClick: () -> Unit,
+    contentColor: Color,
     modifier: Modifier = Modifier,
 ) {
     when {
@@ -7374,6 +7560,7 @@ private fun LosslessOrStats(
                 stringResource(R.string.upgrading_quality)
             },
             animated = false,
+            contentColor = contentColor,
             onClick = onBadgeClick,
             modifier = modifier,
         )
@@ -7385,6 +7572,7 @@ private fun LosslessOrStats(
             // confirmed. It is what makes the badge read as an achievement
             // rather than a label, which only one of these two is.
             animated = true,
+            contentColor = contentColor,
             onClick = onBadgeClick,
             modifier = modifier,
         )
@@ -7392,6 +7580,7 @@ private fun LosslessOrStats(
             text = "Dolby Atmos",
             animated = true,
             iconPainter = painterResource(R.drawable.ic_dolby_atmos),
+            contentColor = contentColor,
             onClick = onBadgeClick,
             modifier = modifier,
         )
@@ -7401,18 +7590,21 @@ private fun LosslessOrStats(
         nerdStats?.isHiQuality == true -> LosslessLabel(
             text = stringResource(R.string.high_quality),
             animated = false,
+            contentColor = contentColor,
             onClick = onBadgeClick,
             modifier = modifier,
         )
         effectiveQuality == AudioQuality.LOW && nerdStats?.isLowQuality == true -> LosslessLabel(
             text = stringResource(R.string.data_saver),
             animated = false,
+            contentColor = contentColor,
             onClick = onBadgeClick,
             modifier = modifier,
         )
         effectiveQuality == AudioQuality.MEDIUM && nerdStats?.isMediumQuality == true -> LosslessLabel(
             text = stringResource(R.string.medium_quality),
             animated = false,
+            contentColor = contentColor,
             onClick = onBadgeClick,
             modifier = modifier,
         )
@@ -7425,6 +7617,7 @@ private fun LosslessOrStats(
 private fun LosslessLabel(
     text: String,
     animated: Boolean,
+    contentColor: Color,
     modifier: Modifier = Modifier,
     icon: ImageVector = Icons.Rounded.Headphones,
     iconPainter: Painter? = null,
@@ -7444,7 +7637,7 @@ private fun LosslessLabel(
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        val tint = Color.White.copy(alpha = if (animated) 0.7f else 0.45f)
+        val tint = contentColor.copy(alpha = if (animated) 0.7f else 0.45f)
         if (iconPainter != null) {
             Icon(
                 painter = iconPainter,
@@ -7462,14 +7655,14 @@ private fun LosslessLabel(
         }
         Spacer(Modifier.width(4.dp))
         if (animated) {
-            ShimmerText(text = text)
+            ShimmerText(text = text, contentColor = contentColor)
         } else {
             Text(
                 text = text,
                 style = MaterialTheme.typography.labelMedium.copy(
                     fontSize = (MaterialTheme.typography.labelMedium.fontSize.value + 1).sp,
                 ),
-                color = Color.White.copy(alpha = 0.45f),
+                color = contentColor.copy(alpha = 0.45f),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -7486,7 +7679,7 @@ private fun LosslessLabel(
  * ends instead of being sized for whatever length happened to be typical.
  */
 @Composable
-private fun ShimmerText(text: String) {
+private fun ShimmerText(text: String, contentColor: Color) {
     var widthPx by remember { mutableIntStateOf(0) }
     val transition = rememberInfiniteTransition(label = "lossless-shimmer")
     val progress by transition.animateFloat(
@@ -7498,14 +7691,14 @@ private fun ShimmerText(text: String) {
         ),
         label = "lossless-shimmer-progress",
     )
-    val baseColor = Color.White.copy(alpha = 0.55f)
+    val baseColor = contentColor.copy(alpha = 0.55f)
     val brush = if (widthPx <= 0) {
         Brush.linearGradient(listOf(baseColor, baseColor))
     } else {
         val band = widthPx * 0.6f
         val center = -band + progress * (widthPx + 2 * band)
         Brush.linearGradient(
-            colorStops = arrayOf(0f to baseColor, 0.5f to Color.White, 1f to baseColor),
+            colorStops = arrayOf(0f to baseColor, 0.5f to contentColor, 1f to baseColor),
             start = Offset(center - band, 0f),
             end = Offset(center + band, 0f),
         )
