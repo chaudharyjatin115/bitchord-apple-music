@@ -51,6 +51,9 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.focus.FocusRequester
 import coil3.compose.AsyncImage
 import com.music.bitchord.data.model.BrowseItem
@@ -246,11 +249,13 @@ fun SearchScreen(
                                     },
                                     onLongPress = { onSongLongPress(row.song) },
                                     onSwipeToQueue = { onSongSwipe(row.song) },
+                                    subtitleColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                                 )
                                 is SearchResult.Browse -> BrowseRow(
                                     item = row.item,
                                     onClick = { onBrowseClick(row.item) },
                                     onLongPress = onBrowseLongPress?.let { { it(row.item) } },
+                                    subtitleColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                                 )
                             }
                             if (index < section.rows.lastIndex) {
@@ -319,17 +324,26 @@ private fun TopResultCard(
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
                 Text(
+                    text = "Top result",
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        letterSpacing = 1.2.sp,
+                        fontWeight = FontWeight.Bold,
+                    ),
+                    color = com.music.bitchord.ui.theme.AccentRed,
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
                     text = song.title,
-                    style = MaterialTheme.typography.titleLarge,
+                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
-                Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.height(2.dp))
                 Text(
                     text = song.artist,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -346,19 +360,25 @@ private fun TopResultCard(
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             OutlinedButton(
                 onClick = onPlay,
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurface),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = com.music.bitchord.ui.theme.AccentRed),
+                border = null,
+                shape = RoundedCornerShape(10.dp),
+                modifier = Modifier.weight(1f).background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(10.dp)),
             ) {
                 Icon(Icons.Rounded.PlayArrow, contentDescription = null)
                 Spacer(Modifier.width(6.dp))
-                Text(stringResource(R.string.play))
+                Text(stringResource(R.string.play), fontWeight = FontWeight.Bold)
             }
             OutlinedButton(
                 onClick = onPlaylist,
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurface),
+                border = null,
+                shape = RoundedCornerShape(10.dp),
+                modifier = Modifier.weight(1f).background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(10.dp)),
             ) {
                 Icon(Icons.AutoMirrored.Rounded.PlaylistAdd, contentDescription = null)
                 Spacer(Modifier.width(6.dp))
-                Text(stringResource(R.string.playlist_action))
+                Text(stringResource(R.string.playlist_action), fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -581,7 +601,7 @@ private fun LazyListScope.recentSearches(
             Text(
                 text = stringResource(R.string.clear),
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary,
+                color = com.music.bitchord.ui.theme.AccentRed,
                 modifier = Modifier
                     .clip(RoundedCornerShape(percent = 50))
                     .clickable(onClick = onClear)
@@ -641,7 +661,12 @@ private fun RecentSearchRow(term: String, onClick: () -> Unit, onRemove: () -> U
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun BrowseRow(item: BrowseItem, onClick: () -> Unit, onLongPress: (() -> Unit)? = null) {
+private fun BrowseRow(
+    item: BrowseItem,
+    onClick: () -> Unit,
+    onLongPress: (() -> Unit)? = null,
+    subtitleColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -676,7 +701,7 @@ private fun BrowseRow(item: BrowseItem, onClick: () -> Unit, onLongPress: (() ->
             Text(
                 text = item.subtitle.ifBlank { item.type.name.lowercase(Locale.ROOT).replaceFirstChar { it.uppercase(Locale.ROOT) } },
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = subtitleColor,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -706,7 +731,7 @@ private fun SearchFilterTabs(filter: SearchFilter, onFilterChange: (SearchFilter
                 modifier = Modifier
                     .clip(FILTER_PILL_SHAPE)
                     .background(
-                        if (selected) MaterialTheme.colorScheme.onBackground
+                        if (selected) com.music.bitchord.ui.theme.AccentRed
                         else MaterialTheme.colorScheme.surfaceVariant,
                     )
                     // Only the pill that isn't already selected has anything to
@@ -721,7 +746,7 @@ private fun SearchFilterTabs(filter: SearchFilter, onFilterChange: (SearchFilter
                 Text(
                     text = entry.label,
                     style = MaterialTheme.typography.labelLarge,
-                    color = if (selected) MaterialTheme.colorScheme.background
+                    color = if (selected) Color.White
                     else MaterialTheme.colorScheme.onBackground,
                     maxLines = 1,
                 )

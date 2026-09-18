@@ -7,6 +7,9 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.ui.graphics.drawscope.Stroke
+import com.music.bitchord.ui.theme.AccentRed
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
@@ -35,6 +38,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
+import com.music.bitchord.ui.theme.appleMusicSwitchColors
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -127,10 +131,7 @@ fun EqualizerScreen(
                             haptics.play(if (it) Haptic.ToggleOn else Haptic.ToggleOff)
                             AppSettings.setEqualizerEnabled(it)
                         },
-                        colors = SwitchDefaults.colors(
-                            checkedTrackColor = MaterialTheme.colorScheme.primary,
-                            checkedBorderColor = MaterialTheme.colorScheme.primary,
-                        ),
+                        colors = appleMusicSwitchColors(),
                     )
                 },
                 onClick = {
@@ -575,9 +576,10 @@ private fun BandFader(
     onChange: (Float) -> Unit,
 ) {
     val haptics = rememberHaptics()
-    val trackColor = MaterialTheme.colorScheme.outline
-    val fillColor = MaterialTheme.colorScheme.primary
-    val knobColor = MaterialTheme.colorScheme.background
+    val isDark = isSystemInDarkTheme()
+    val trackColor = if (isDark) Color(0xFF3A3A3C) else Color(0xFFE5E5EA)
+    val fillColor = AccentRed
+    val knobColor = Color.White
     val range = EqLayout.MANUAL_RANGE_DB
     // See [TonePad]: the gesture block outlives the composition that made it.
     val latest by rememberUpdatedState(value)
@@ -656,6 +658,12 @@ private fun BandFader(
             center = Offset(centreX, knobY + 1.5f),
         )
         drawCircle(color = knobColor, radius = inset, center = Offset(centreX, knobY))
+        drawCircle(
+            color = Color.Black.copy(alpha = 0.12f),
+            radius = inset,
+            center = Offset(centreX, knobY),
+            style = Stroke(width = 1.dp.toPx()),
+        )
     }
 }
 
@@ -706,9 +714,10 @@ private fun BalanceControl(
     onChange: (Float) -> Unit,
 ) {
     val haptics = rememberHaptics()
-    val trackColor = MaterialTheme.colorScheme.outline
-    val fillColor = MaterialTheme.colorScheme.primary
-    val knobColor = MaterialTheme.colorScheme.background
+    val isDark = isSystemInDarkTheme()
+    val trackColor = if (isDark) Color(0xFF3A3A3C) else Color(0xFFE5E5EA)
+    val fillColor = AccentRed
+    val knobColor = Color.White
     // See [TonePad]: the gesture block outlives the composition that made it.
     val latest by rememberUpdatedState(balance)
 
@@ -798,6 +807,12 @@ private fun BalanceControl(
                 center = Offset(knobX, centreY + 1.5f),
             )
             drawCircle(color = knobColor, radius = inset, center = Offset(knobX, centreY))
+            drawCircle(
+                color = Color.Black.copy(alpha = 0.12f),
+                radius = inset,
+                center = Offset(knobX, centreY),
+                style = Stroke(width = 1.dp.toPx()),
+            )
         }
     }
 }

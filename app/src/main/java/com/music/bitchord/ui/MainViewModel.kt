@@ -132,6 +132,15 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val _filter = MutableStateFlow(SearchFilter.ALL)
     val filter: StateFlow<SearchFilter> = _filter.asStateFlow()
 
+    private val _onRepeatSongs = MutableStateFlow<List<Song>>(emptyList())
+    val onRepeatSongs: StateFlow<List<Song>> = _onRepeatSongs.asStateFlow()
+
+    fun refreshOnRepeat() {
+        viewModelScope.launch {
+            _onRepeatSongs.value = com.music.bitchord.data.stats.ListeningStats.getOnRepeatSongs()
+        }
+    }
+
     private val _searchLoadingMore = MutableStateFlow(false)
     val searchLoadingMore: StateFlow<Boolean> = _searchLoadingMore.asStateFlow()
 
@@ -1224,6 +1233,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun loadHome() {
+        refreshOnRepeat()
         val identity = listenerKey()
         val generation = homeLoadGeneration.incrementAndGet()
         _home.value = UiState.Loading

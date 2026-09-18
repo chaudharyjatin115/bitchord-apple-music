@@ -222,6 +222,7 @@ import com.music.bitchord.data.settings.SongSort
 import com.music.bitchord.ui.replay.ReplayScreen
 import com.music.bitchord.ui.replay.cards
 import com.music.bitchord.ui.replay.ReplayShareSheet
+import com.music.bitchord.ui.player.SongShareSheet
 import com.music.bitchord.ui.replay.ReplayStories
 import com.music.bitchord.ui.replay.ReplayStoryPage
 import com.music.bitchord.ui.replay.rememberReplayState
@@ -231,6 +232,8 @@ import com.music.bitchord.ui.theme.SystemBarIcons
 import com.music.bitchord.ui.utils.rememberIosOverscrollFactory
 import com.music.bitchord.ui.performance.resolvePerformanceRefreshRate
 import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.HazeStyle
+import dev.chrisbanes.haze.HazeTint
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
 import dev.chrisbanes.haze.materials.HazeMaterials
@@ -502,6 +505,7 @@ private fun BitChordApp(
     var showDiscordLogin by remember { mutableStateOf(false) }
     var discordDialog by remember { mutableStateOf<DiscordDialog?>(null) }
     var songActions by remember { mutableStateOf<Song?>(null) }
+    var songShareTarget by remember { mutableStateOf<Song?>(null) }
     var showLyricsOffset by remember { mutableStateOf(false) }
     /**
      * Whether the track menu that is up was opened from the player.
@@ -548,10 +552,12 @@ private fun BitChordApp(
     // following radio items carry radioName in their MediaItem extras.
     var activeRadioSeed by remember { mutableStateOf<Pair<String, String>?>(null) }
 
-    // The player fills the screen with dark artwork whichever theme is on, so
-    // it keeps light glyphs; every other surface follows the theme. Replay's
-    // page and stories are the same case — dark artwork either way.
-    SystemBarIcons(dark = !darkTheme && !showNowPlaying && !showReplay && replayStory == null)
+    // The player fills the screen with artwork whichever theme is on, so
+    // it follows the theme's icon preference; Replay's page and stories
+    // fill the screen with dark artwork either way, so they keep light glyphs.
+    val playerVisible = playerDocked || showNowPlaying
+    val lightIcons = !darkTheme && !showReplay && replayStory == null
+    SystemBarIcons(dark = lightIcons)
 
     val homeState by viewModel.home.collectAsStateWithLifecycle()
     val homeLoadingMore by viewModel.homeLoadingMore.collectAsStateWithLifecycle()
@@ -713,6 +719,22 @@ private fun BitChordApp(
 
     val controller = rememberMediaController()
     val player = rememberPlayerState(controller)
+
+    // Adaptive Haze: The glass tint follows the artwork's atmosphere.
+    val playerPalette = rememberArtworkPalette(player.song?.thumbnailUrl)
+    val adaptiveHazeStyle = remember(playerPalette, darkTheme) {
+        val base = if (darkTheme) Color.Black else Color.White
+        val tint = if (darkTheme) {
+            playerPalette.background.copy(alpha = 0.82f)
+        } else {
+            playerPalette.background.copy(alpha = 0.72f)
+        }
+        HazeStyle(
+            backgroundColor = base,
+            tints = listOf(HazeTint(tint)),
+            blurRadius = 24.dp,
+        )
+    }
     var queueNotice by remember { mutableStateOf<QueueActionNotice?>(null) }
     var queueNoticeId by remember { mutableIntStateOf(0) }
     val showQueueNotice: (String) -> Unit = { message ->
@@ -843,7 +865,7 @@ private fun BitChordApp(
     // reads [scrolled] — which made the whole floating bar, both of its states
     // and every glass surface on them recompose once per frame for the length of
     // a fold. Keyed on the labels so a locale change still rebuilds it.
-    val playLabel = stringResource(R.string.play)
+    val homeLabel = stringResource(R.string.home)
     val exploreLabel = stringResource(R.string.explore)
     val libraryLabel = stringResource(R.string.library)
     val searchLabel = stringResource(R.string.search)
@@ -851,9 +873,9 @@ private fun BitChordApp(
     val replayLabel = stringResource(R.string.replay)
     val queueLabel = stringResource(R.string.queue)
     val sharedLinkLabel = stringResource(R.string.shared_link)
-    val tabs = remember(playLabel, exploreLabel, libraryLabel, searchLabel) {
+    val tabs = remember(homeLabel, exploreLabel, libraryLabel, searchLabel, selectedTab) {
         listOf(
-            BottomTab(playLabel, BitChordIcons.Play),
+            BottomTab(homeLabel, BitChordIcons.Home),
             BottomTab(exploreLabel, BitChordIcons.Explore),
             BottomTab(libraryLabel, BitChordIcons.Library),
             BottomTab(searchLabel, BitChordIcons.Search),
@@ -1632,6 +1654,12 @@ private fun BitChordApp(
     val replayCards = remember(replay.summary) {
         replay.summary?.takeUnless { it.isEmpty }?.cards(context).orEmpty()
     }
+    val onRepeatSongs by viewModel.onRepeatSongs.collectAsStateWithLifecycle()
+    val playOnRepeat = {
+        if (onRepeatSongs.isNotEmpty()) {
+            playFrom(onRepeatSongs, 0, QueueSource("On Repeat", PlaybackSourceType.HOME))
+        }
+    }
 
     // ---- The track in the player ----
     // Whatever started this track knew its title and its artwork, but rarely
@@ -1653,11 +1681,15 @@ private fun BitChordApp(
     }
     val playerSong = player.song?.let { current ->
         val extra = links?.takeIf { it.videoId == current.videoId } ?: return@let current
-        current.copy(
+        val enriched = current.copy(
             artistId = current.artistId ?: extra.artistId,
             albumId = current.albumId ?: extra.albumId,
             albumName = current.albumName ?: extra.albumName,
         )
+        // Ensure the corrector knows about the enriched metadata (ids/album name)
+        // so they don't disappear if a source is substituted later.
+        com.music.bitchord.playback.MetadataCorrector.remember(enriched.videoId, enriched.toMediaItem().mediaMetadata)
+        enriched
     }
     // The three-dot menu snapshots the track into songActions when it's opened,
     // so a menu opened before the lookup above resolves would otherwise be
@@ -2429,6 +2461,11 @@ private fun BitChordApp(
                             onLoadMore = viewModel::loadMoreHome,
                             loadingMore = homeLoadingMore,
                             recentlyPlayedLoading = homeRecentlyPlayedLoading,
+                            onRepeatSongs = onRepeatSongs,
+                            onOnRepeatSongClick = { song ->
+                                playRadio(song, QueueSource("On Repeat", PlaybackSourceType.HOME))
+                            },
+                            onPlayOnRepeat = playOnRepeat,
                         )
                         TAB_EXPLORE -> selectedMoodGenre?.let { category ->
                             MoodGenrePlaylistsScreen(
@@ -2822,6 +2859,7 @@ private fun BitChordApp(
                         onPrevious = { controller?.seekToPrevious() },
                         onExpand = { showNowPlaying = true },
                         modifier = Modifier.fillMaxWidth(),
+                        hazeStyle = adaptiveHazeStyle,
                     )
                 } else Column(
                     modifier = Modifier
@@ -2846,6 +2884,8 @@ private fun BitChordApp(
                             isPlaying = player.isPlaying,
                             isLoading = player.isLoading,
                             hazeState = hazeState,
+                            positionMs = player.position.positionMs,
+                            durationMs = player.durationMs,
                             onPlayPause = {
                                 controller?.let { if (it.isPlaying) it.pause() else it.play() }
                             },
@@ -2853,6 +2893,7 @@ private fun BitChordApp(
                             onPrevious = { controller?.seekToPrevious() },
                             onExpand = { showNowPlaying = true },
                             modifier = Modifier.fillMaxWidth(),
+                            hazeStyle = adaptiveHazeStyle,
                         )
                         Spacer(Modifier.height(8.dp))
                     }
@@ -2861,6 +2902,7 @@ private fun BitChordApp(
                         selectedIndex = selectedTab,
                         hazeState = hazeState,
                         onTabSelected = onTabSelected,
+                        hazeStyle = adaptiveHazeStyle,
                     )
                 }
             }
@@ -2955,11 +2997,7 @@ private fun BitChordApp(
             // tablet the player is visible whatever the menu was opened from.
             val fromPlayer = menuFromPlayer
             val share: () -> Unit = {
-                val sendIntent = Intent(Intent.ACTION_SEND).apply {
-                    type = "text/plain"
-                    putExtra(Intent.EXTRA_TEXT, "https://music.youtube.com/watch?v=${song.videoId}")
-                }
-                context.startActivity(Intent.createChooser(sendIntent, song.title))
+                songShareTarget = song
                 songActions = null
             }
             // Navigating has to take the player down with the sheet, or the
@@ -3123,6 +3161,21 @@ private fun BitChordApp(
                     } else {
                         null
                     },
+                )
+            }
+        }
+
+        // ---- Apple Music style Story Card Share Sheet ----
+        songShareTarget?.let { song ->
+            ModalBottomSheet(
+                onDismissRequest = { songShareTarget = null },
+                containerColor = Color.Transparent,
+                dragHandle = null,
+            ) {
+                SongShareSheet(
+                    song = song,
+                    hazeState = hazeState,
+                    onDismiss = { songShareTarget = null },
                 )
             }
         }

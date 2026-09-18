@@ -529,6 +529,7 @@ private fun AlertScaffold(
     onDismiss: () -> Unit,
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    com.music.bitchord.ui.theme.SystemBarIcons(dark = false)
     val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
     val shape = RoundedCornerShape(ALERT_CORNER)
 
