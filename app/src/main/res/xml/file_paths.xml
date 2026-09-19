@@ -12,5 +12,6 @@
 -->
 <paths>
     <cache-path name="shared" path="shared/" />
+    <cache-path name="story_cards" path="story_cards/" />
     <cache-path name="updates" path="updates/" />
 </paths>

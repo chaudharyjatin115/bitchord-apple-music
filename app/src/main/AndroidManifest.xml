@@ -47,6 +47,21 @@
         android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:maxSdkVersion="28" />
 
+    <!-- Package visibility queries for direct social story sharing -->
+    <queries>
+        <package android:name="com.instagram.android" />
+        <package android:name="com.whatsapp" />
+        <package android:name="com.whatsapp.w4b" />
+        <intent>
+            <action android:name="com.instagram.share.ADD_TO_STORY" />
+            <data android:mimeType="image/*" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.SEND" />
+            <data android:mimeType="image/*" />
+        </intent>
+    </queries>
+
     <application
         android:name=".BitChordApplication"
         android:allowBackup="true"
@@ -255,18 +270,6 @@
           are sent with this app's own identity. Exporting them would only make
           the update broadcast reachable by anything on the device.
         -->
-        <receiver
-            android:name=".widget.MediaWidgetSquare"
-            android:exported="false"
-            android:label="@string/widget_square_label">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/widget_media_square" />
-        </receiver>
-
         <receiver
             android:name=".widget.MediaWidgetWide"
             android:exported="false"

@@ -1,33 +1,23 @@
 <div align="center">
 
 <br/>
-<br/>
 
-<img src="Logo.png" alt="BitChord app icon" width="200" />
+<img src="Logo.png" alt="BitChord app icon" width="180" />
 
-# BitChord
+# BitChord — Apple Music Edition
 
-### Aesthetic YouTube Music Client
-
-<br/>
-
-[![Latest release](https://img.shields.io/github/v/release/kushagrasinghx/BitChord?style=for-the-badge&labelColor=0d1117)](https://github.com/kushagrasinghx/BitChord/releases)
-[![License](https://img.shields.io/github/license/kushagrasinghx/BitChord?style=for-the-badge&labelColor=0d1117)](https://github.com/kushagrasinghx/BitChord/blob/main/LICENSE)
-[![Downloads](https://img.shields.io/github/downloads/kushagrasinghx/BitChord/total?style=for-the-badge&labelColor=0d1117)](https://github.com/kushagrasinghx/BitChord/releases)
+### An Aesthetic, Fluid Apple Music-Themed Audio Client for Android
 
 <br/>
 
-[**Download**](#download) · [**Features**](#features) · [**Contributing**](#contributing) · [**Support**](#support) · [**Disclaimer**](#disclaimer)
+[**Download**](#download) · [**Features**](#features) · [**Building**](#building) · [**License**](#license)
 
 <br/>
-
-<a href="https://trendshift.io/repositories/177639?utm_source=trendshift-badge&utm_medium=badge&utm_campaign=badge-trendshift-177639" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/trendshift/repositories/177639/daily?language=Kotlin" alt="kushagrasinghx%2FBitChord | Trendshift" width="250" height="55"/></a>
-<a href="https://trendshift.io/repositories/177639?utm_source=trendshift-badge&utm_medium=badge&utm_campaign=badge-trendshift-177639" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/trendshift/repositories/177639/weekly?language=Kotlin" alt="kushagrasinghx%2FBitChord | Trendshift" width="250" height="55"/></a>
 
 </div>
 
-> [!IMPORTANT]
-> BitChord is not affiliated with, endorsed by, or connected to YouTube or Google in any way. Use it at your own discretion.
+> [!NOTE]
+> BitChord is an open-source, independent third-party client. It is not affiliated with Google, YouTube, or Apple.
 
 ---
 
@@ -41,37 +31,33 @@
   <tr>
     <td width="50%" valign="top">
 
-#### Playback
-- **Search, browse and play** anything available on YouTube Music.
-- **Hi-Res lossless audio** — FLAC/ALAC from a configured module source, with YouTube Music as fallback.
-- **Gapless playback with true crossfade**, adjustable 0–12s.
-- **Automix [Beta]** — DJ-style transitions with beat-matching and tempo-stretching.
-- **Offline downloads** — save tracks with embedded metadata.
-- **Local music library** integration.
-- **Background playback** via a proper foreground media session.
-- **Apple-like lyrics animation** — credit to [binimum](https://github.com/binimum/am-lyrics).
+####  Apple Music Aesthetic & Experience
+- **Liquid Glass & Frosted UI** — Fluid glass navigation bars, dynamic background blurs, and polished Material 3 design.
+- **Mesh Artwork Backdrop** — Real-time mesh gradient visuals extracted from live playing album art.
+- **Apple-Style Time-Synced Lyrics** — Smooth syllable & word-by-word animated lyrics view.
+- **Heavy Rotation / On Repeat** — Smart recency-weighted listening algorithm and custom On Repeat cards.
+- **Motion Canvas Artwork** — Animated video/motion artwork playback on Now Playing screen.
 
-#### Experience
-- **Animated album canvas** — motion artwork on the now-playing screen.
-- **Word-synced lyrics** — word/syllable-level highlighting from multiple sources.
-- **Dynamic, artwork-driven theming** — Material palette extracted from album art.
-- **Frosted-glass UI** — Telegram-style translucent bars via Haze, Material 3 theming.
+#### 🎵 Premium Audio Playback
+- **Lossless Audio Streaming** — High-Resolution FLAC/ALAC support with YouTube Music fallback.
+- **True Gapless & Crossfade** — Smooth track transition handling with 0–12s crossfade.
+- **Automix Engine** — Smart DJ-style beat matching and tempo transitions.
+- **Offline Downloads** — Save lossless & high quality tracks directly to device storage with tags.
 
     </td>
     <td width="50%" valign="top">
 
-#### Connectivity & Accounts
-- **Sign in with your Google account** for personalized content.
-- **Discord Rich Presence** — in-app login, live track/artist/album and progress.
-- **Scrobbling** to Last.fm and ListenBrainz.
-- **Pluggable sources** — add, edit, test and health-check module sources.
+#### 🌐 Connectivity & Integration
+- **Google Account Sync** — Full access to custom playlists, recommendations, and library.
+- **Discord Rich Presence** — Displays current track, artist, album, and live playback progress on Discord.
+- **Last.fm & ListenBrainz** — Native scrobbling support for all listening history.
+- **Custom Pluggable Audio Sources** — Extensible module system for alternative audio backends.
 
-#### Controls & Tweaks
-- **Per-network audio quality** — separate quality ceilings for Wi-Fi and mobile data.
-- **Playback speed control** (0.5×–2.0×) and **skip silence**.
-- **Sleep timer** — fixed presets or "stop after this track".
-- **System equalizer** integration.
-- **Stats for nerds** — codec, bit depth, sample rate, and more on the now-playing screen.
+#### ⚙️ Sound Tweaks & Control
+- **Custom System Equalizer** — Equalizer integration with presets.
+- **Per-Network Quality Controls** — Custom quality profiles for Wi-Fi vs mobile data.
+- **Playback Controls** — Pitch-preserving speed adjustment (0.5×–2.0×), skip silence, and sleep timer.
+- **Audio Output Switcher** — Quick switching between Bluetooth, USB, and built-in speakers.
 
     </td>
   </tr>
@@ -85,7 +71,7 @@
 
 <h1><a id="download"></a>Download</h1>
 
-Grab the latest signed APK from the [Releases](https://github.com/kushagrasinghx/BitChord/releases) page. Sideloading requires enabling "Install unknown apps" for whichever app you download it with.
+Check the [Releases](https://github.com/chaudharyjatin115/bitchord-apple-music/releases) tab for the latest signed APK build.
 
 </div>
 
@@ -93,41 +79,15 @@ Grab the latest signed APK from the [Releases](https://github.com/kushagrasinghx
 
 <div align="center">
 
-<h1><a id="contributing"></a>Contributing</h1>
+<h1><a id="building"></a>Building from Source</h1>
 
-We welcome contributions to BitChord! When submitting a Pull Request, please ensure you make your PR against the **`latest`** branch, not the `main` branch.
+Build BitChord locally using Gradle:
 
-</div>
+```bash
+./gradlew assembleRelease
+```
 
----
-
-<div align="center">
-
-<h1><a id="support"></a>Support</h1>
-
-BitChord is free and always will be — if it's earned a spot in your rotation, you can chip in here:
-
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/kushagrasinghx)
-[![PayPal](https://img.shields.io/badge/PayPal-00457C?style=for-the-badge&logo=paypal&logoColor=white)](https://paypal.me/kuxhagrasingh)
-
-<br/>
-<br/>
-<img src="upi_support.jpg" alt="UPI Support" width="250" />
-
-</div>
-
----
-
-<div align="center">
-
-<h1><a id="disclaimer"></a>Disclaimer & Legal Notice</h1>
-
-BitChord is an independent, community-driven third-party audio player and client. It is **not** associated with Google LLC, YouTube Music, Deezer, Telegram, or any of their parent companies.
-
-* **No Media Hosting:** BitChord does not host, upload, or store copyrighted music files. It operates strictly as an interface to scan local device storage or stream media directly from public, public-facing, or user-authenticated APIs.
-* **Fair Use & API Usage:** This software is created solely for personal research, educational, and fair-use purposes. The user is entirely responsible for ensuring their usage aligns with their local copyright laws and YouTube Terms of Service.
-* **No Ad-Blocking Guarantee:** While BitChord focuses on providing a clean listening environment, it does not guarantee permanent bypasses or modifications to commercial third-party platform conditions.
-* **Copyleft:** BitChord is free software under the GPLv3. The license does not let anyone forbid others from selling or redistributing copies, but any distribution must come with the Corresponding Source under the same license.
+The APK will be generated under `app/build/outputs/apk/release/`.
 
 </div>
 
@@ -137,6 +97,6 @@ BitChord is an independent, community-driven third-party audio player and client
 
 <h1><a id="license"></a>License</h1>
 
-This project is licensed under the **GNU General Public License v3.0 (GPLv3)**. See the [LICENSE](LICENSE) file for details.
+Licensed under the **GNU General Public License v3.0 (GPLv3)**. See [LICENSE](LICENSE) for details.
 
 </div>

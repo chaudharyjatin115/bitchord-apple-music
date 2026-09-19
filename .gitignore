@@ -38,6 +38,7 @@ keystore.properties
 .shots/
 .tmp_verify/
 .debug/
+*.patch
 
 # AI agent configuration
 AGENTS.md
