@@ -34,6 +34,8 @@ internal data class MediaWidgetSnapshot(
     val isPlaying: Boolean,
     val hasPrevious: Boolean,
     val hasNext: Boolean,
+    val positionMs: Long = 0L,
+    val durationMs: Long = 0L,
 ) {
     /** Whether there is a track to draw at all. */
     val hasTrack: Boolean get() = mediaId != null
@@ -48,6 +50,8 @@ internal data class MediaWidgetSnapshot(
             isPlaying = false,
             hasPrevious = false,
             hasNext = false,
+            positionMs = 0L,
+            durationMs = 0L,
         )
 
         fun save(context: Context, snapshot: MediaWidgetSnapshot) {
@@ -59,6 +63,8 @@ internal data class MediaWidgetSnapshot(
                 .putBoolean(KEY_PLAYING, snapshot.isPlaying)
                 .putBoolean(KEY_HAS_PREVIOUS, snapshot.hasPrevious)
                 .putBoolean(KEY_HAS_NEXT, snapshot.hasNext)
+                .putLong(KEY_POSITION, snapshot.positionMs)
+                .putLong(KEY_DURATION, snapshot.durationMs)
                 .apply()
         }
 
@@ -75,6 +81,8 @@ internal data class MediaWidgetSnapshot(
                     isPlaying = prefs.getBoolean(KEY_PLAYING, false),
                     hasPrevious = prefs.getBoolean(KEY_HAS_PREVIOUS, false),
                     hasNext = prefs.getBoolean(KEY_HAS_NEXT, false),
+                    positionMs = prefs.getLong(KEY_POSITION, 0L),
+                    durationMs = prefs.getLong(KEY_DURATION, 0L),
                 )
             }
             return EMPTY
@@ -90,5 +98,7 @@ internal data class MediaWidgetSnapshot(
         private const val KEY_PLAYING = "playing"
         private const val KEY_HAS_PREVIOUS = "has_previous"
         private const val KEY_HAS_NEXT = "has_next"
+        private const val KEY_POSITION = "position"
+        private const val KEY_DURATION = "duration"
     }
 }
