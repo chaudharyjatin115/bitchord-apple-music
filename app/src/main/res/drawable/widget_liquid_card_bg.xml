@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Soft Glass Shadow -->
+    <item android:top="2dp">
+        <shape android:shape="rectangle">
+            <corners android:radius="14dp" />
+            <solid android:color="#20000000" />
+        </shape>
+    </item>
+    <!-- Liquid Frosted Body -->
+    <item android:bottom="2dp">
+        <shape android:shape="rectangle">
+            <corners android:radius="14dp" />
+            <gradient
+                android:angle="270"
+                android:startColor="#28FFFFFF"
+                android:centerColor="#0EFFFFFF"
+                android:endColor="#1CFFFFFF"
+                android:type="linear" />
+            <stroke android:width="1dp" android:color="#35FFFFFF" />
+        </shape>
+    </item>
+</layer-list>

@@ -123,7 +123,7 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory {
         ImageLoader.Builder(context)
             .memoryCache {
                 MemoryCache.Builder()
-                    .maxSizePercent(context, 0.20)
+                    .maxSizePercent(context, 0.10) // Reduced from 0.20 to 0.10 for better RAM efficiency
                     .build()
             }
             .diskCache {

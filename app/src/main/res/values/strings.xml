@@ -159,6 +159,9 @@
     <string name="widget_wide_label">Now playing 4×2</string>
     <string name="widget_square_description">Album art with playback controls, in a square.</string>
     <string name="widget_wide_description">Album art with the track and playback controls, full width.</string>
+    <string name="widget_shelf_desc">A record shelf showing your heavy rotation.</string>
+    <string name="widget_large_label">Apple Music Style</string>
+    <string name="widget_large_desc">Apple Music style widget with blurred background and recent list.</string>
     <string name="widget_play">Play</string>
     <string name="widget_pause">Pause</string>
     <string name="widget_next">Next</string>
