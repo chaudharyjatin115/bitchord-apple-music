@@ -350,6 +350,39 @@ object ListeningStats {
             }
     }
 
+    /**
+     * Songs sorted strictly by last played timestamp (newest first).
+     */
+    suspend fun getRecentlyPlayedSongs(limit: Int = 30): List<Song> = withContext(Dispatchers.IO) {
+        flushAndAwait()
+        val today = LocalDate.now()
+        val merged = MergedBucket()
+        months().filter { ReplayPeriod.THIS_MONTH.covers(it, today) || ReplayPeriod.THIS_MONTH.covers(it, today.minusMonths(1)) }
+            .forEach { month -> read(month.toString())?.let(merged::add) }
+
+        val statsSongs = merged.tracks.values
+            .filter { it.last > 0L }
+            .sortedByDescending { it.last }
+            .take(limit)
+            .map {
+                Song(
+                    videoId = it.id,
+                    title = it.title,
+                    artist = it.artist,
+                    thumbnailUrl = it.art,
+                    artistId = it.artistId,
+                    albumId = it.albumId,
+                    albumName = it.album,
+                )
+            }
+
+        if (statsSongs.isNotEmpty()) {
+            statsSongs
+        } else {
+            com.music.bitchord.playback.LastPlayed.load()?.songs?.take(limit) ?: emptyList()
+        }
+    }
+
     /** Every month with a file, oldest first. */
     fun months(): List<YearMonth> {
         if (!ready) return emptyList()
