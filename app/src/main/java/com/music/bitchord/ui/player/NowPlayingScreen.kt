@@ -2911,6 +2911,7 @@ fun NowPlayingScreen(
                         // Shrinks as the header collapses, so the queue's
                         // heading doesn't have to compete with it.
                         val titleSize = lerp(28.sp, 17.sp, p)
+                        val artistSize = lerp(18.sp, 14.sp, p)
                         // Only the title's own overflow gates the artist's stagger
                         // below — an artist line that's long on its own has no
                         // reason to wait on a title that already fits.
@@ -2941,9 +2942,9 @@ fun NowPlayingScreen(
                         )
                         MarqueeText(
                             text = song.artist,
-                            style = MaterialTheme.typography.titleLarge.copy(
+                            style = MaterialTheme.typography.titleMedium.copy(
                                 fontWeight = FontWeight.W500,
-                                fontSize = titleSize,
+                                fontSize = artistSize,
                                 letterSpacing = (-0.3).sp,
                             ),
                             color = contentColor.copy(alpha = if (isNight) 0.55f else 0.65f),

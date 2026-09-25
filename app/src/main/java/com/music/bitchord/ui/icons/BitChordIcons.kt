@@ -630,23 +630,29 @@ object BitChordIcons {
             }
             if (filled) {
                 path(fill = SolidColor(Color.White)) {
-                    // Eighth note head + stem
-                    moveTo(10.2f, 16f)
-                    arcToRelative(1.8f, 1.5f, 0f, isMoreThanHalf = true, isPositiveArc = true, 3f, -1.2f)
-                    lineTo(13.2f, 11f)
-                    lineTo(16f, 11f)
-                    lineTo(16f, 12.5f)
-                    lineTo(14.7f, 12.5f)
-                    lineTo(14.7f, 16f)
-                    arcToRelative(1.8f, 1.5f, 0f, isMoreThanHalf = true, isPositiveArc = true, -3f, 1.2f)
+                    // Eighth note head (oval cutout)
+                    moveTo(8.6f, 15.2f)
+                    arcToRelative(1.6f, 1.4f, 0f, isMoreThanHalf = true, isPositiveArc = true, 3.2f, 0f)
+                    arcToRelative(1.6f, 1.4f, 0f, isMoreThanHalf = true, isPositiveArc = true, -3.2f, 0f)
                     close()
+                }
+                path(
+                    stroke = SolidColor(Color.White),
+                    strokeLineWidth = 1.8f,
+                    strokeLineCap = StrokeCap.Round,
+                    strokeLineJoin = StrokeJoin.Round,
+                ) {
+                    // Stem and flag cutout
+                    moveTo(11.8f, 15.2f)
+                    lineTo(11.8f, 11.2f)
+                    lineTo(14.8f, 12.2f)
                 }
             } else {
                 path(fill = stroke) {
                     // Solid note head inside the library drawer
-                    moveTo(9.2f, 15.5f)
-                    arcToRelative(1.6f, 1.3f, 0f, isMoreThanHalf = true, isPositiveArc = true, 3.2f, 0f)
-                    arcToRelative(1.6f, 1.3f, 0f, isMoreThanHalf = true, isPositiveArc = true, -3.2f, 0f)
+                    moveTo(8.6f, 15.2f)
+                    arcToRelative(1.6f, 1.4f, 0f, isMoreThanHalf = true, isPositiveArc = true, 3.2f, 0f)
+                    arcToRelative(1.6f, 1.4f, 0f, isMoreThanHalf = true, isPositiveArc = true, -3.2f, 0f)
                     close()
                 }
                 path(
@@ -656,9 +662,9 @@ object BitChordIcons {
                     strokeLineJoin = StrokeJoin.Round,
                 ) {
                     // Stem and flag inside the drawer
-                    moveTo(12.4f, 15.5f)
-                    lineTo(12.4f, 11f)
-                    lineTo(15.2f, 11f)
+                    moveTo(11.8f, 15.2f)
+                    lineTo(11.8f, 11.2f)
+                    lineTo(14.8f, 12.2f)
                 }
             }
         }.build()
